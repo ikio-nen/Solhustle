@@ -1,4 +1,4 @@
-/* SealDeal Shared Client Library */
+/* Solhustle Shared Client Library */
 const $ = (sel) => document.querySelector(sel);
 
 // --- Base58 Encoding / Decoding ---
@@ -86,7 +86,7 @@ function renderNavbar(activePage) {
   header.innerHTML = `
     <a href="/landing" class="brand">
       <span style="font-size:18px;">⛓️</span>
-      <h1>SEALDEAL<span class="dot">.</span></h1>
+      <h1>SOLHUSTLE<span class="dot">.</span></h1>
     </a>
     <nav class="nav-links">
       <a href="/landing" class="nav-link ${activePage === 'landing' ? 'active' : ''}">Overview</a>
@@ -119,13 +119,13 @@ function updateNavbarSession(session, portalKey) {
 }
 
 function logoutPortal(portalKey) {
-  sessionStorage.removeItem("sealdeal.auth." + portalKey);
+  sessionStorage.removeItem("solhustle.auth." + portalKey);
   window.location.reload();
 }
 
 // --- Portal Authentication Gate (Crafting Brands Aesthetic) ---
 async function requirePortalAuth(targetRole, portalTitle, defaultUsername, defaultPassword, portalKey = targetRole) {
-  const sessionKey = "sealdeal.auth." + portalKey;
+  const sessionKey = "solhustle.auth." + portalKey;
 
   // 1. Check existing session
   try {
@@ -274,7 +274,7 @@ async function requirePortalAuth(targetRole, portalTitle, defaultUsername, defau
 
 // Fallback for demo auto-sessions if needed
 async function ensureSession(targetActorName) {
-  const sessionKey = "sealdeal.actor." + targetActorName;
+  const sessionKey = "solhustle.actor." + targetActorName;
   try {
     const cached = JSON.parse(sessionKey ? sessionStorage.getItem(sessionKey) || "null" : "null");
     if (cached && cached.token && cached.wallet) {
