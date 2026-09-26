@@ -13,7 +13,7 @@
   },
   "packageManager": "pnpm@12.6.0",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.0",
