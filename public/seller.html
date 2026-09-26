@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SealDeal — Seller Portal</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<main>
+  <!-- Seller Account Banner -->
+  <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:#14110e; border:1px solid var(--line);">
+    <div>
+      <div class="row" style="gap:8px; margin-bottom:4px;">
+        <span class="tag-label accent">[ FREELANCER ACCESS ]</span>
+        <span class="pill ok" id="s-user-badge">Authenticated: seller</span>
+      </div>
+      <h2 style="margin:0; font-size:22px; color:#fff;">SELLER DASHBOARD</h2>
+      <div class="mono dim" id="s-wallet" style="margin-top:4px; font-size:12px;">loading wallet…</div>
+    </div>
+    <div class="row">
+      <span class="pill ok" id="s-balance" style="font-weight:700; font-size:12px;">payout balance: …</span>
+      <button class="btn sec" id="btn-copy" style="font-size:11px;">Copy Wallet</button>
+      <button class="btn sec" id="btn-refresh" style="font-size:11px;">↻ Refresh</button>
+      <button class="btn sec" id="btn-signout" style="font-size:11px; border-color:rgba(239,68,68,0.4); color:#f87171;">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="row" style="margin:20px 0 16px; gap:8px; flex-wrap:wrap;">
+    <button class="btn" id="tab-active" onclick="switchTab('active')">🛠️ 01 · My Active Contracts</button>
+    <button class="btn sec" id="tab-market" onclick="switchTab('market')">🌐 02 · Browse Open Marketplace</button>
+  </div>
+
+  <!-- Section 1: Active Jobs -->
+  <div id="section-active">
+    <div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+      <span class="num-tag">01</span>
+      <h3 style="font-size:18px; margin:0;">MY ASSIGNED PROJECTS & DELIVERABLES</h3>
+    </div>
+    <div id="active-jobs-container">
+      <div class="card dim">Loading active jobs…</div>
+    </div>
+  </div>
+
+  <!-- Section 2: Marketplace -->
+  <div id="section-market" style="display:none;">
+    <div style="display:flex; align-items:center; gap:10px; margin:20px 0 8px;">
+      <span class="num-tag">02</span>
+      <h3 style="font-size:18px; margin:0;">OPEN MARKETPLACE (FUNDED ESCROWS)</h3>
+    </div>
+    <p class="dim" style="font-size:12px; margin:0 0 16px;">
+      All jobs listed below have real SOL locked in on-chain escrow vaults. Apply to secure the contract and deliver milestones.
+    </p>
+    <div id="market-jobs-container">
+      <div class="card dim">Loading marketplace…</div>
+    </div>
+  </div>
+</main>
+
+<script src="/vendor/nacl-fast.min.js"></script>
+<script src="/common.js"></script>
+<script>
+  renderNavbar("seller");
+
+  let session = null;
+  let activeTab = "active";
+
+  async function init() {
+    try {
+      session = await requirePortalAuth("freelancer", "Seller Portal", "seller", "seller123", "seller");
+      $("#s-wallet").textContent = session.wallet;
+      $("#s-user-badge").textContent = `Authenticated: ${session.username} (Seller)`;
+      updateBalance();
+      loadActiveJobs();
+      loadMarketplace();
+    } catch (err) {
+      toast("Auth failed: " + err.message, "err");
+    }
+  }
+
+  async function updateBalance() {
+    try {
+      const r = await api("GET", "/demo/balance/" + session.wallet);
+      $("#s-balance").textContent = `${Number(r.sol).toFixed(4)} SOL`;
+    } catch {
+      $("#s-balance").textContent = "balance error";
+    }
+  }
+
+  $("#btn-copy").onclick = () => {
+    navigator.clipboard.writeText(session.wallet);
+    toast("Freelancer wallet copied", "ok");
+  };
+
+  $("#btn-signout").onclick = () => {
+    logoutPortal("seller");
+  };
+
+  $("#btn-refresh").onclick = () => {
+    updateBalance();
+    loadActiveJobs();
+    loadMarketplace();
+  };
+
+  function switchTab(tab) {
+    activeTab = tab;
+    $("#tab-active").className = tab === "active" ? "btn" : "btn sec";
+    $("#tab-market").className = tab === "market" ? "btn" : "btn sec";
+
+    $("#section-active").style.display = tab === "active" ? "" : "none";
+    $("#section-market").style.display = tab === "market" ? "" : "none";
+
+    if (tab === "active") loadActiveJobs();
+    if (tab === "market") loadMarketplace();
+  }
+
+  // --- Active Jobs ---
+  async function loadActiveJobs() {
+    const container = $("#active-jobs-container");
+    try {
+      const data = await api("GET", "/jobs?mine=1", undefined, session.token);
+      const jobs = data.jobs || [];
+      if (jobs.length === 0) {
+        container.innerHTML = `<div class="card dim">No active projects assigned yet. Click "Browse Open Marketplace" to apply!</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      for (const j of jobs) {
+        const d = await api("GET", "/jobs/" + j.id, undefined, session.token);
+        const card = document.createElement("div");
+        card.className = "card";
+
+        let actionsHtml = "";
+        if (j.status === "in_progress") {
+          actionsHtml = `
+            <div style="background:#100d0a; border:1px solid var(--line); padding:14px; border-radius:6px; margin:12px 0;">
+              <strong style="color:var(--acc); font-size:12px; text-transform:uppercase;">
+                📦 Submit Milestone Deliverable:
+              </strong>
+              <div style="margin-top:8px;">
+                <label>GitHub PR / Deliverable Link</label>
+                <input id="del-url-${j.id}" placeholder="GitHub Repository / Proof Link (URL)" value="https://github.com/solana-developers/program-vault-pr-42" />
+              </div>
+              <div class="row" style="margin-top:10px; justify-content:space-between;">
+                <span class="dim" style="font-size:11px;">Upon submission, contract moves to Delivered state awaiting buyer approval</span>
+                <button class="btn ok" id="btn-submit-del-${j.id}" onclick="submitDelivery(${j.id})">
+                  📦 Submit Deliverable Link
+                </button>
+              </div>
+            </div>`;
+        }
+        if (j.status === "delivered") {
+          actionsHtml = `<span class="pill warn">✓ Deliverable Submitted — Awaiting Buyer Verification & Devnet Release</span>`;
+        }
+        if (j.status === "released") {
+          actionsHtml = `<span class="pill ok">🎉 Payout Released & Confirmed On Solana Devnet!</span>`;
+        }
+
+        let txsHtml = "";
+        const txs = d.escrow_transactions || [];
+        if (txs.length > 0) {
+          txsHtml = `<div style="margin-top:12px; font-size:12px; background:#100d0a; padding:8px 12px; border-radius:6px; border:1px solid var(--line);">
+            <span class="dim">Settlement Proof:</span>
+            ${txs.map(t => `${pill(t.instruction_type)} ${txLink(t.tx_signature)}`).join(" · ")}
+          </div>`;
+        }
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="margin:0 0 4px; color:#fff; font-size:18px;">#${j.id} — ${esc(j.title)} ${pill(j.status)}</h3>
+              <p class="dim" style="font-size:13px; margin:0;">${esc(j.requirements)}</p>
+            </div>
+            <div style="text-align:right;">
+              <strong style="color:var(--ok); font-size:16px;">${fmtSol(j.sol_amount * 1e9)} SOL</strong>
+              <div class="dim" style="font-size:12px;">($${j.usd_budget} USD)</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            ${actionsHtml}
+          </div>
+          ${txsHtml}
+        `;
+        container.appendChild(card);
+      }
+    } catch (err) {
+      container.innerHTML = `<div class="card err-text">${esc(err.message)}</div>`;
+    }
+  }
+
+  // --- Marketplace ---
+  async function loadMarketplace() {
+    const container = $("#market-jobs-container");
+    try {
+      const data = await api("GET", "/jobs", undefined, session.token);
+      const openJobs = (data.jobs || []).filter(j => j.status === "funded");
+      if (openJobs.length === 0) {
+        container.innerHTML = `<div class="card dim">No open funded jobs available at the moment. Jobs must be funded by buyers first.</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      for (const j of openJobs) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="margin:0 0 4px; color:#fff;">#${j.id} — ${esc(j.title)} <span class="pill ok">Escrow Locked</span></h3>
+              <p class="dim" style="font-size:13px; margin:0 0 8px;">${esc(j.requirements)}</p>
+              <div class="mono dim" style="font-size:11px;">Escrow Vault: ${acctLink(j.escrow_address)}</div>
+            </div>
+            <div style="text-align:right;">
+              <strong style="color:var(--ok); font-size:16px;">${fmtSol(j.sol_amount * 1e9)} SOL</strong>
+              <div class="dim" style="font-size:12px;">Budget: $${j.usd_budget}</div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px; justify-content:flex-end;">
+            <button class="btn ok" onclick="applyToJob(${j.id})">✍️ Apply to this Job</button>
+          </div>
+        `;
+        container.appendChild(card);
+      }
+    } catch (err) {
+      container.innerHTML = `<div class="card err-text">${esc(err.message)}</div>`;
+    }
+  }
+
+  window.applyToJob = async (jobId) => {
+    const message = prompt("Enter your proposal / pitch for this job:") || "Ready to deliver per specifications.";
+    try {
+      await api("POST", `/jobs/${jobId}/apply`, { message }, session.token);
+      toast("Application submitted successfully!", "ok");
+      switchTab("active");
+    } catch (err) {
+      toast("Application failed: " + err.message, "err");
+    }
+  };
+
+  window.submitDelivery = async (jobId) => {
+    const btn = $(`#btn-submit-del-${jobId}`);
+    const input = $(`#del-url-${jobId}`);
+    const url = input?.value?.trim() || "https://github.com/solana-developers/program-vault-pr-42";
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Submitting Deliverable…";
+      }
+      if (input) input.disabled = true;
+
+      await api("POST", `/jobs/${jobId}/deliveries`, {
+        attachment_urls: [url],
+        note: "Deliverable completed per scope specifications."
+      }, session.token);
+
+      toast("Deliverable submitted! Waiting for buyer approval.", "ok");
+      loadActiveJobs();
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "📦 Submit Deliverable Link";
+      }
+      if (input) input.disabled = false;
+      toast("Delivery submission failed: " + err.message, "err");
+    }
+  };
+
+  init();
+</script>
+</body>
+</html>
