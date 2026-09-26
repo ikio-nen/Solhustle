@@ -192,6 +192,14 @@ export async function confirmBuyerFunding(
   return { signature, explorerUrl: explorerTx(signature), alreadyRecorded: !inserted };
 }
 
+function formatOnChainError(err: unknown): string {
+  const str = typeof err === "string" ? err : JSON.stringify(err);
+  if (str.includes('"Custom":1') || str.includes("ResultWithNegativeLamports")) {
+    return "Insufficient SOL in wallet to fund this escrow deposit. Please click 'Request Airdrop' in the top banner.";
+  }
+  return `tx failed on-chain: ${str}`;
+}
+
 /** Verify on-chain state immediately without a polling retry loop */
 export async function confirmSignature(signature: string, _blockhash?: string, _lastValidBlockHeight?: number): Promise<void> {
   // 500ms breather for slot leader block ingestion
@@ -200,7 +208,7 @@ export async function confirmSignature(signature: string, _blockhash?: string, _
     const statuses = await conn.getSignatureStatuses([signature], { searchTransactionHistory: true });
     const st = statuses?.value?.[0];
     if (st && st.err) {
-      throw new HttpError(502, `tx failed on-chain: ${JSON.stringify(st.err)}`);
+      throw new HttpError(400, formatOnChainError(st.err));
     }
   } catch (err) {
     if (err instanceof HttpError) throw err;

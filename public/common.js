@@ -376,7 +376,16 @@ function promptSignFundingModal(jobId, built, session) {
         mStatus.style.background = "#131a22";
         mStatus.style.border = "1px solid #3b82f6";
         mStatus.style.color = "#6ea8fe";
-        mStatus.innerHTML = `✍️ <strong>Step 1/2:</strong> Signing transaction client-side with Ed25519 keypair...`;
+        mStatus.innerHTML = `✍️ <strong>Step 1/2:</strong> Checking balance & signing transaction with Ed25519 keypair...`;
+
+        try {
+          const balData = await api("GET", "/demo/balance/" + session.wallet);
+          if (balData && balData.lamports < Number(built.lamports) + 5000) {
+            throw new Error(`Insufficient wallet balance: You have ${(balData.lamports / 1e9).toFixed(4)} SOL, but this deposit requires ${(built.lamports / 1e9).toFixed(4)} SOL. Please click 'Request Airdrop' in the top banner.`);
+          }
+        } catch (e) {
+          if (e.message.includes("Insufficient")) throw e;
+        }
 
         let rawTxHex = "";
         let signature = "";
