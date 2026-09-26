@@ -9,7 +9,7 @@
 <body>
 <main>
   <!-- Seller Account Banner -->
-  <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:#14110e; border:1px solid var(--line);">
+  <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:var(--card); border:1px solid var(--line);">
     <div>
       <div class="row" style="gap:8px; margin-bottom:4px;">
         <span class="tag-label accent">[ FREELANCER ACCESS ]</span>
@@ -135,7 +135,7 @@
         let actionsHtml = "";
         if (j.status === "in_progress") {
           actionsHtml = `
-            <div style="background:#100d0a; border:1px solid var(--line); padding:14px; border-radius:6px; margin:12px 0;">
+            <div style="background:var(--card2); border:1px solid var(--line); padding:14px; border-radius:6px; margin:12px 0;">
               <strong style="color:var(--acc); font-size:12px; text-transform:uppercase;">
                 📦 Submit Milestone Deliverable:
               </strong>
@@ -161,7 +161,7 @@
         let txsHtml = "";
         const txs = d.escrow_transactions || [];
         if (txs.length > 0) {
-          txsHtml = `<div style="margin-top:12px; font-size:12px; background:#100d0a; padding:8px 12px; border-radius:6px; border:1px solid var(--line);">
+          txsHtml = `<div style="margin-top:12px; font-size:12px; background:var(--card2); padding:8px 12px; border-radius:6px; border:1px solid var(--line);">
             <span class="dim">Settlement Proof:</span>
             ${txs.map(t => `${pill(t.instruction_type)} ${txLink(t.tx_signature)}`).join(" · ")}
           </div>`;

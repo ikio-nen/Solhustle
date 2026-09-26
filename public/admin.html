@@ -9,7 +9,7 @@
 <body>
 <main>
   <!-- Admin Banner (Crafting Brands Aesthetic) -->
-  <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:#14110e; border:1px solid var(--line);">
+  <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:var(--card); border:1px solid var(--line);">
     <div>
       <div class="row" style="gap:8px; margin-bottom:4px;">
         <span class="tag-label accent">[ ARBITER & RECONCILIATION ]</span>
@@ -27,33 +27,33 @@
 
   <!-- KPI Metrics (Anton Display Typography) -->
   <div class="grid" style="margin-bottom:16px;">
-    <div class="card" style="margin:0; background:#14110e; border:1px solid var(--line);">
+    <div class="card" style="margin:0; background:var(--card); border:1px solid var(--line);">
       <span class="tag-label">Settled On-Chain Volume</span>
-      <div style="font-family:var(--font-display); font-size:32px; color:var(--acc); margin-top:4px; letter-spacing:.02em;" id="stat-volume">… SOL</div>
+      <div style="font-family:inherit; font-size:32px; color:var(--acc); margin-top:4px; letter-spacing:.02em;" id="stat-volume">… SOL</div>
       <span class="dim mono" style="font-size:11px;" id="stat-volume-usd">≈ $0 USD</span>
     </div>
 
-    <div class="card" style="margin:0; background:#14110e; border:1px solid var(--line);">
+    <div class="card" style="margin:0; background:var(--card); border:1px solid var(--line);">
       <span class="tag-label">Devnet Transactions</span>
-      <div style="font-family:var(--font-display); font-size:32px; color:#fff; margin-top:4px; letter-spacing:.02em;" id="stat-txs">0</div>
+      <div style="font-family:inherit; font-size:32px; color:#fff; margin-top:4px; letter-spacing:.02em;" id="stat-txs">0</div>
       <span class="dim" style="font-size:11px;">100% Solscan Devnet Proof</span>
     </div>
 
-    <div class="card" style="margin:0; background:#14110e; border:1px solid var(--line);">
+    <div class="card" style="margin:0; background:var(--card); border:1px solid var(--line);">
       <span class="tag-label">Active Escrows / Jobs</span>
-      <div style="font-family:var(--font-display); font-size:32px; color:#fff; margin-top:4px; letter-spacing:.02em;" id="stat-jobs">0</div>
+      <div style="font-family:inherit; font-size:32px; color:#fff; margin-top:4px; letter-spacing:.02em;" id="stat-jobs">0</div>
       <span class="dim" style="font-size:11px;" id="stat-disputes">0 Open Disputes</span>
     </div>
 
-    <div class="card" style="margin:0; background:#14110e; border:1px solid var(--line);">
+    <div class="card" style="margin:0; background:var(--card); border:1px solid var(--line);">
       <span class="tag-label">Live Gemini Oracle Feed</span>
-      <div style="font-family:var(--font-display); font-size:24px; color:var(--acc); margin-top:6px; letter-spacing:.02em;" id="stat-oracle">1 SOL = $…</div>
+      <div style="font-family:inherit; font-size:24px; color:var(--acc); margin-top:6px; letter-spacing:.02em;" id="stat-oracle">1 SOL = $…</div>
       <span class="dim mono" style="font-size:11px;">api.gemini.com/v1/pubticker/solusd</span>
     </div>
   </div>
 
   <!-- Neon Cloud PostgreSQL Inspection Card (Crafting Brands Aesthetic) -->
-  <div class="card" style="background:#14110e; border:1px solid var(--line);">
+  <div class="card" style="background:var(--card); border:1px solid var(--line);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
       <div>
         <div class="tag-label accent">[ CLOUD PERSISTENCE • AWS US-EAST-2 ]</div>
@@ -65,26 +65,26 @@
       <button class="btn sec" onclick="loadNeonStatus()" style="font-size:11px;">Query Neon DB</button>
     </div>
     <div class="grid" style="margin-bottom:14px;">
-      <div style="background:#100d0a; padding:14px; border-radius:6px; border:1px solid var(--line);">
+      <div style="background:var(--card2); padding:14px; border-radius:6px; border:1px solid var(--line);">
         <span class="tag-label">Neon Wallets</span>
-        <div style="font-family:var(--font-display); font-size:22px; color:var(--txt); margin-top:4px;" id="neon-users-count">…</div>
+        <div style="font-family:inherit; font-size:22px; color:var(--txt); margin-top:4px;" id="neon-users-count">…</div>
       </div>
-      <div style="background:#100d0a; padding:14px; border-radius:6px; border:1px solid var(--line);">
+      <div style="background:var(--card2); padding:14px; border-radius:6px; border:1px solid var(--line);">
         <span class="tag-label">Neon Jobs Stored</span>
-        <div style="font-family:var(--font-display); font-size:22px; color:var(--acc); margin-top:4px;" id="neon-jobs-count">…</div>
+        <div style="font-family:inherit; font-size:22px; color:var(--acc); margin-top:4px;" id="neon-jobs-count">…</div>
       </div>
-      <div style="background:#100d0a; padding:14px; border-radius:6px; border:1px solid var(--line);">
+      <div style="background:var(--card2); padding:14px; border-radius:6px; border:1px solid var(--line);">
         <span class="tag-label">Neon Settled Txns</span>
-        <div style="font-family:var(--font-display); font-size:22px; color:#4ade80; margin-top:4px;" id="neon-txs-count">…</div>
+        <div style="font-family:inherit; font-size:22px; color:#4ade80; margin-top:4px;" id="neon-txs-count">…</div>
       </div>
     </div>
-    <div id="neon-live-proof" class="mono dim" style="font-size:11px; background:#100d0a; padding:12px; border-radius:4px; max-height:120px; overflow-y:auto; white-space:pre-wrap; border:1px solid var(--line);">
+    <div id="neon-live-proof" class="mono dim" style="font-size:11px; background:var(--card2); padding:12px; border-radius:4px; max-height:120px; overflow-y:auto; white-space:pre-wrap; border:1px solid var(--line);">
       Connecting to Neon PostgreSQL…
     </div>
   </div>
 
   <!-- Settled On-Chain Transactions Table -->
-  <div class="card" style="background:#14110e; border:1px solid var(--line);">
+  <div class="card" style="background:var(--card); border:1px solid var(--line);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <div style="display:flex; align-items:center; gap:10px;">
         <span class="num-tag">01</span>

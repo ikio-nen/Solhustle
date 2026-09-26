@@ -1,7 +1,7 @@
 {
-  "name": "solana-escrow-marketplace",
+  "name": "solhustle",
   "version": "1.0.0",
-  "description": "Solana escrow freelance marketplace - backend + proof frontend (hackathon phase 1)",
+  "description": "Solhustle — Solana Escrow Freelance Marketplace",
   "type": "module",
   "scripts": {
     "start": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env src/server.ts",
