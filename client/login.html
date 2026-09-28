@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sign in · Solhustle</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="theme-color" content="#23252c" />
+<link rel="stylesheet" href="/style.css" />
+<style>
+  /* Login-specific layout only. Every colour comes from /style.css, so this page
+     can never drift away from the rest of the site. The shared navbar is
+     rendered by common.js rather than a bespoke terminal-style topbar. */
+  body {
+    align-items: center;
+    justify-content: flex-start;
+    padding: 48px 18px 40px;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+  /* `align-items: center` would shrink the sticky navbar to its content. */
+  header.app-nav { width: 100%; }
+
+  .card {
+    margin: auto;
+    width: 100%; max-width: 430px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 30px 26px;
+    box-shadow: var(--shadow-lift);
+  }
+  .brandrow { text-align: center; margin-bottom: 20px; }
+  .brandrow .logo {
+    width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 12px;
+    display: grid; place-items: center; background: var(--acc);
+    color: #fff;
+  }
+  .brandrow .logo svg { width: 26px; height: 26px; display: block; }
+  .brandrow .logo .brand-gem { fill: var(--lime); animation: gemGlow 6s ease-in-out infinite; }
+  .brandrow h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+  .brandrow p { margin: 6px 0 0; color: var(--dim); font-size: 13px; }
+
+  /* provider / persona section header: label on the left, status badge right */
+  .idrow {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border-top: 1px solid var(--line); padding-top: 16px; margin-top: 18px;
+  }
+  .idrow .label { color: var(--dim); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line2); background: var(--wash);
+    color: var(--dim); border-radius: var(--r-pill); padding: 4px 10px;
+    font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+  }
+  .badge.ok { border-color: var(--ok-line); background: var(--ok-soft); color: var(--ok); }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .cta {
+    width: 100%; margin-top: 16px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    background: var(--acc); color: #fff; border: 1px solid var(--acc);
+    border-radius: var(--r-pill);
+    padding: 13px; font: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; text-decoration: none;
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .cta:hover { background: var(--acc-dim); border-color: var(--acc-dim); }
+  .cta:disabled { opacity: .5; cursor: progress; }
+  .cta.muted { background: #fff; color: var(--txt); border: 1px solid var(--line2); }
+  .cta.muted:hover { background: var(--wash); border-color: var(--acc); }
+  .cta svg { flex: 0 0 auto; }
+  .cta.inline { margin-top: 8px; }
+
+  .helper { margin: 12px 0 0; color: var(--dim); font-size: 12px; line-height: 1.6; text-align: center; }
+  .helper code { color: var(--txt); word-break: break-all; }
+
+  /* Shown instead of the Auth0 button when the server has no client credentials. */
+  .notice {
+    border: 1px solid var(--warn-line); border-radius: var(--r-md); padding: 14px;
+    background: var(--warn-soft); color: var(--txt); font-size: 12px; line-height: 1.7;
+  }
+  .notice strong { display: block; color: var(--warn); font-size: 13px; margin-bottom: 5px; }
+  .notice code { color: var(--txt); font-family: var(--font-mono); font-size: 11px; word-break: break-all; }
+  .notice .kbd {
+    display: inline-block; margin-top: 9px; padding: 3px 8px; border-radius: var(--r-sm);
+    border: 1px solid var(--line2); background: #fff; color: var(--dim); font-size: 11px;
+  }
+
+  .divider { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin: 20px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  /* demo personas */
+  .personas { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .persona {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; text-align: left; cursor: pointer;
+    background: #fff; border: 1px solid var(--line2); border-radius: var(--r-md);
+    color: var(--dim); padding: 11px 13px; font: inherit;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .persona:hover { border-color: var(--acc); background: var(--wash); }
+  .persona .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .persona .avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--wash);
+    border: 1px solid var(--line2); display: grid; place-items: center;
+    color: var(--txt); font-size: 12px; font-weight: 600; flex: 0 0 auto;
+  }
+  .persona .nm { display: block; color: var(--txt); font-size: 13px; font-weight: 600; }
+  .persona .rl { display: block; color: var(--dim); font-size: 11px; }
+  .persona .check { visibility: hidden; color: var(--acc); font-size: 13px; }
+  .persona.active { border-color: var(--acc); background: #fff; box-shadow: 0 0 0 3px rgba(35,37,44,.08); }
+  .persona.active .check { visibility: visible; }
+
+  label { display: block; color: var(--dim); font-size: 12px; font-weight: 500; margin-bottom: 6px; }
+  input, select {
+    width: 100%; background: #fff; color: var(--txt);
+    border: 1px solid var(--line2); border-radius: var(--r-md);
+    padding: 11px 12px; font: inherit; font-size: 14px; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(35,37,44,.08); }
+  .field { margin-bottom: 14px; }
+  .pw-wrap { position: relative; }
+  .pw-wrap button {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: 0; color: var(--dim); font: inherit; font-size: 11px;
+    font-weight: 600; cursor: pointer; padding: 4px 6px;
+  }
+  .pw-wrap button:hover { color: var(--txt); }
+
+  .role-row { display: flex; gap: 10px; }
+  .role {
+    flex: 1; text-align: left; cursor: pointer;
+    background: #fff; border: 1px solid var(--line2); border-radius: var(--r-md);
+    color: var(--dim); padding: 12px; font: inherit;
+  }
+  .role .t { display: block; color: var(--txt); font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .role .s { font-size: 11px; }
+  .role.active { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(35,37,44,.08); color: var(--txt); }
+
+  .banner { display: none; margin-bottom: 14px; border-radius: var(--r-md); padding: 11px 13px; font-size: 13px; line-height: 1.5; }
+  .banner.err { display: block; color: var(--err); background: var(--err-soft); border: 1px solid var(--err-line); }
+  .banner.ok { display: block; color: var(--ok); background: var(--ok-soft); border: 1px solid var(--ok-line); }
+  .banner code { color: var(--txt); word-break: break-all; }
+
+  .linkish {
+    display: block; width: 100%; margin-top: 18px; padding: 0;
+    background: none; border: 0; color: var(--dim); font: inherit; font-size: 13px;
+    cursor: pointer; text-align: center;
+  }
+  .linkish:hover { color: var(--txt); text-decoration: underline; }
+
+  .links { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: center; font-size: 13px; }
+  .links a { color: var(--dim); text-decoration: none; cursor: pointer; }
+  .links a:hover { color: var(--txt); text-decoration: underline; }
+  .links a.muted { color: var(--dim); }
+  .links .sep { color: var(--line2); }
+
+  .footnote { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; line-height: 1.6; text-align: center; }
+  .footnote a { color: var(--txt); text-decoration: none; }
+  .footnote a:hover { text-decoration: underline; }
+  .hint { color: var(--dim); font-size: 12px; margin-top: -4px; margin-bottom: 12px; line-height: 1.5; }
+  .meter { height: 4px; border-radius: var(--r-pill); background: var(--line); overflow: hidden; margin-top: 8px; }
+  .meter > i { display: block; height: 100%; width: 0; background: var(--err); transition: width .2s ease, background .2s ease; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brandrow">
+      <div class="logo">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M14.6 4.2 5.6 9.6v12.8l9 5.4" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M17.4 4.2 26.4 9.6v12.8l-9 5.4" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 12.4 19.1 16 16 19.6 12.9 16Z" class="brand-gem"/>
+        </svg>
+      </div>
+      <h1>SOLHUSTLE</h1>
+      <p>Trustless Solana escrow marketplace</p>
+    </div>
+
+    <div id="banner" class="banner"></div>
+
+    <!-- The front door: hosted identity provider (Auth0 Universal Login). -->
+    <div id="auth0-wrap" class="hidden">
+      <div class="idrow">
+        <span class="label">Hosted authentication</span>
+        <span class="badge ok"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>AUTH0 · READY</span>
+      </div>
+      <a class="cta" id="auth0-btn" href="/auth/auth0/login">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Continue with Auth0</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+      <p class="helper">Takes you to <code id="auth0-domain">Auth0</code>, the hosted login page, to enter your credentials — your password never touches this app.</p>
+    </div>
+
+    <!-- No client credentials on this server: say what has to be set instead of
+         rendering a button that would fail on redirect. -->
+    <div id="auth0-missing" class="notice hidden">
+      <strong>Auth0 is not configured on this server.</strong>
+      Set <code>AUTH0_ISSUER_BASE_URL</code>, <code>AUTH0_CLIENT_ID</code> and
+      <code>AUTH0_CLIENT_SECRET</code> to switch on hosted sign-in, then whitelist
+      <code id="auth0-callback">/auth/auth0/callback</code> as an Allowed Callback URL,
+      <code id="auth0-logout">/login</code> as an Allowed Logout URL and
+      <code id="auth0-origin">the app origin</code> as an Allowed Web Origin.
+      <span class="kbd">Sign-in below stays local until then.</span>
+    </div>
+
+    <!-- Escape hatch for a server without Auth0 credentials: the seeded demo
+         accounts and the local email/password form. Collapsed (and pointless)
+         once Auth0 can sign people in — see ?demo=1 to force it open. -->
+    <div id="fallback" class="hidden">
+      <button type="button" class="linkish" id="fallback-toggle">Use local demo sign-in →</button>
+      <div id="fallback-body" class="hidden">
+
+    <!-- Demo personas (seeded accounts, one click) -->
+    <div id="demo-wrap" class="hidden">
+      <div class="idrow">
+        <span class="label">Select demo identity</span>
+        <span class="badge"><span class="dot"></span>DEMO · READY</span>
+      </div>
+      <div class="personas" id="personas"></div>
+      <button type="button" class="cta" id="persona-btn" disabled>
+        <span id="persona-btn-label">Enter as …</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+      <p class="helper">Signs in as a seeded account with its own devnet wallet and secret key — no password needed.</p>
+    </div>
+
+    <button type="button" class="linkish hidden" id="email-toggle">or use email &amp; password</button>
+
+    <div id="email-wrap" class="hidden">
+      <div class="divider" id="email-divider">USE EMAIL</div>
+
+      <form id="auth-form" novalidate>
+      <!-- login -->
+      <div data-view="login">
+        <div class="field">
+          <label for="identity">Email or username</label>
+          <input id="identity" type="text" autocomplete="username" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="pw-wrap">
+            <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+            <button type="button" data-toggle-pw="password">SHOW</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- signup -->
+      <div data-view="signup" class="hidden">
+        <div class="field">
+          <label>I am joining as</label>
+          <div class="role-row">
+            <button type="button" class="role active" data-role="client"><span class="t">🛒 Client</span><span class="s">Post &amp; fund jobs</span></button>
+            <button type="button" class="role" data-role="freelancer"><span class="t">💼 Freelancer</span><span class="s">Deliver &amp; earn SOL</span></button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="signup-email">Email</label>
+          <input id="signup-email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="signup-password">Password</label>
+          <div class="pw-wrap">
+            <input id="signup-password" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+            <button type="button" data-toggle-pw="signup-password">SHOW</button>
+          </div>
+          <div class="meter"><i id="pw-meter"></i></div>
+        </div>
+        <p class="hint">Use 8+ characters mixing letters, digits and symbols. Passwords are stored salted + hashed (scrypt).</p>
+      </div>
+
+      <!-- admin -->
+      <div data-view="admin" class="hidden">
+        <div class="field">
+          <label for="admin-username">Admin username</label>
+          <input id="admin-username" type="text" autocomplete="username" placeholder="ops-admin" />
+        </div>
+        <div class="field">
+          <label for="admin-password">Admin password</label>
+          <div class="pw-wrap">
+            <input id="admin-password" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+            <button type="button" data-toggle-pw="admin-password">SHOW</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="admin-secret">Setup secret</label>
+          <input id="admin-secret" type="password" autocomplete="off" placeholder="ADMIN_SETUP_SECRET" />
+        </div>
+        <p class="hint">Admin provisioning is gated by the server's <code>ADMIN_SETUP_SECRET</code>. Ask an operator for the value — it is never shipped to the browser.</p>
+      </div>
+
+      <!-- forgot -->
+      <div data-view="forgot" class="hidden">
+        <div class="field">
+          <label for="forgot-email">Account email</label>
+          <input id="forgot-email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <p class="hint">We'll send a single-use reset link if that account exists.</p>
+      </div>
+
+      <!-- reset -->
+      <div data-view="reset" class="hidden">
+        <div class="field">
+          <label for="reset-token">Reset token</label>
+          <input id="reset-token" type="text" autocomplete="off" placeholder="paste token" />
+        </div>
+        <div class="field">
+          <label for="reset-password">New password</label>
+          <div class="pw-wrap">
+            <input id="reset-password" type="password" autocomplete="new-password" placeholder="New password" />
+            <button type="button" data-toggle-pw="reset-password">SHOW</button>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="cta" id="submit-btn">Sign in</button>
+      </form>
+
+      <div class="links" id="links"></div>
+    </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      Sessions are issued as short-lived JWTs. Signing out revokes the token immediately.<br />
+      ← <a class="muted" href="/">Back to home</a>
+    </div>
+  </div>
+
+<!-- nacl backs the wallet-signature login used by the demo personas (same order
+     the portal pages use). -->
+<script src="/vendor/nacl-fast.min.js"></script>
+<script src="/common.js"></script>
+<script>
+renderNavbar("login");
+
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  // /signup is a real destination, not just an alias: it opens the create-account
+  // form so the two entry points behave like they do on any other site.
+  const pathDefault = window.location.pathname === "/signup" ? "signup" : "login";
+  let mode = (params.get("mode") || pathDefault).toLowerCase();
+  const ALLOWED = ["login", "signup", "admin", "forgot", "reset"];
+  if (!ALLOWED.includes(mode)) mode = "login";
+
+  const TITLES = {
+    login: "Sign in · Solhustle",
+    signup: "Create your account · Solhustle",
+    admin: "Operator access · Solhustle",
+    forgot: "Reset your password · Solhustle",
+    reset: "Choose a new password · Solhustle",
+  };
+
+  const VIEWS = ["login", "signup", "admin", "forgot", "reset"];
+  const CTA = { login: "Sign in", signup: "Create account", admin: "Provision admin", forgot: "Send reset link", reset: "Set new password" };
+  const MODE_LABEL = {
+    login: "Production authentication",
+    signup: "Create a new account",
+    admin: "Restricted operator access",
+    forgot: "Account recovery",
+    reset: "Choose a new password",
+  };
+
+  const $id = (id) => document.getElementById(id);
+  const banner = $id("banner");
+  const form = $id("auth-form");
+  const submitBtn = $id("submit-btn");
+  const emailWrap = $id("email-wrap");
+  const emailToggle = $id("email-toggle");
+  const fallback = $id("fallback");
+  const fallbackBody = $id("fallback-body");
+  const fallbackToggle = $id("fallback-toggle");
+  let fallbackOpen = false;
+  let role = "client";
+  let selectedActor = null;
+
+  // The local password/demo path is a secondary surface: collapsed by default so
+  // the hosted Auth0 button is the only thing competing for attention.
+  function setFallbackOpen(open) {
+    fallbackOpen = open;
+    fallbackBody.classList.toggle("hidden", !open);
+    fallbackToggle.textContent = open ? "Hide local sign-in ⌃" : "Use local demo sign-in →";
+  }
+
+  function showBanner(kind, html) {
+    banner.className = "banner " + kind;
+    banner.innerHTML = html;
+  }
+  function clearBanner() {
+    banner.className = "banner";
+    banner.innerHTML = "";
+  }
+  function setMode(next, opts) {
+    mode = next;
+    document.title = TITLES[mode] || "Solhustle";
+    VIEWS.forEach((v) => {
+      const el = form.querySelector('[data-view="' + v + '"]');
+      if (el) el.classList.toggle("hidden", v !== mode);
+    });
+    submitBtn.textContent = CTA[mode] || "Continue";
+    submitBtn.disabled = false;
+    renderLinks();
+    clearBanner();
+    const first = form.querySelector('[data-view="' + mode + '"] input');
+    if (first && !emailWrap.classList.contains("hidden")) first.focus();
+    if (opts && opts.token) $id("reset-token").value = opts.token;
+  }
+
+  function renderLinks() {
+    const links = $id("links");
+    const parts = [];
+    if (mode === "login") {
+      parts.push('<a data-go="forgot">Forgot password?</a>');
+      parts.push('<span class="sep">·</span>');
+      parts.push('<a data-go="signup">Create an account</a>');
+      parts.push('<span class="sep">·</span>');
+      parts.push('<a class="muted" data-go="admin">Admin access</a>');
+    } else if (mode === "signup") {
+      parts.push('<a data-go="login">Already have an account? Sign in</a>');
+    } else if (mode === "admin") {
+      parts.push('<a data-go="login">← Back to sign in</a>');
+    } else if (mode === "forgot") {
+      parts.push('<a data-go="login">← Back to sign in</a>');
+      parts.push('<span class="sep">·</span>');
+      parts.push('<a data-go="reset">I have a token</a>');
+    } else if (mode === "reset") {
+      parts.push('<a data-go="login">← Back to sign in</a>');
+    }
+    links.innerHTML = parts.join(" ");
+    links.querySelectorAll("[data-go]").forEach((a) => {
+      a.onclick = () => setMode(a.getAttribute("data-go"));
+    });
+  }
+
+  // Password show/hide
+  document.querySelectorAll("[data-toggle-pw]").forEach((btn) => {
+    btn.onclick = () => {
+      const input = $id(btn.getAttribute("data-toggle-pw"));
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      btn.textContent = show ? "HIDE" : "SHOW";
+    };
+  });
+
+  // Role toggle
+  form.querySelectorAll(".role").forEach((btn) => {
+    btn.onclick = () => {
+      form.querySelectorAll(".role").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      role = btn.getAttribute("data-role");
+    };
+  });
+
+  // Password strength meter (signup)
+  const meter = $id("pw-meter");
+  $id("signup-password").addEventListener("input", (e) => {
+    const v = e.target.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[a-z]/.test(v) && /[A-Z]/.test(v)) score++;
+    if (/\d/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    if (v.length >= 14) score++;
+    const pct = Math.min(100, score * 20);
+    meter.style.width = pct + "%";
+    meter.style.background = score <= 1 ? "#ff7a7a" : score <= 3 ? "#e8c85a" : "#8ce07a";
+  });
+
+  // One session for the whole product. The old build wrote a separate key per
+  // portal (solhustle.auth.buyer / .seller / .admin), which is exactly why
+  // signing in and then switching sides felt like logging in twice.
+  function storeSession(res, provider) {
+    return writeSession({
+      token: res.token,
+      user: res.user,
+      username: res.username,
+      provider: provider || "password",
+      wallet: res.user.wallet_address,
+      secretKeyB58: res.secret_key_b58,
+      email: res.email,
+    });
+  }
+
+  // Every signed-in destination is the one app; the account's role decides what
+  // it shows, so there is no portal to route between any more.
+  function portalFor() {
+    return "/app";
+  }
+
+  // Where to land after a successful sign-in: an explicit ?next= target (same
+  // origin only) wins, otherwise the portal matching the account role.
+  function destinationFor(roleName) {
+    const next = params.get("next");
+    if (next && /^\/(?!\/)[^\\]*$/.test(next)) return next;
+    return portalFor(roleName);
+  }
+
+  // The email/password form is the front door only when nothing else can sign you
+  // in; otherwise it hides behind the toggle so the card stays short.
+  function showEmail(reveal) {
+    emailWrap.classList.toggle("hidden", !reveal);
+    emailToggle.classList.toggle("hidden", reveal || mode !== "login");
+    setMode(mode, { token: params.get("token") || "" });
+  }
+
+  emailToggle.onclick = () => showEmail(true);
+  fallbackToggle.onclick = () => setFallbackOpen(!fallbackOpen);
+  if (mode !== "login") emailToggle.classList.add("hidden");
+
+  // --- demo personas --------------------------------------------------------
+  const ROLE_LABEL = { client: "client · posts & funds jobs", freelancer: "freelancer · delivers work" };
+  const DISPLAY_NAME = {
+    client: "Client",
+    freelancerA: "Freelancer A",
+    freelancerB: "Freelancer B",
+    support: "Support",
+    dev: "Operator",
+  };
+  // `label` is the server's canonical roster name; the map is the offline fallback.
+  const displayName = (actor) => actor.label || DISPLAY_NAME[actor.name] || actor.name;
+
+  function renderPersonas(actors) {
+    const list = $id("personas");
+    const btn = $id("persona-btn");
+    const btnLabel = $id("persona-btn-label");
+    list.innerHTML = "";
+
+    actors.forEach((actor) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "persona";
+      row.innerHTML =
+        '<span class="left">' +
+        '<span class="avatar">' + esc(displayName(actor).slice(0, 1).toUpperCase()) + "</span>" +
+        '<span><span class="nm">' + esc(displayName(actor)) + "</span>" +
+        '<span class="rl">' + esc(ROLE_LABEL[actor.role] || actor.role) + " · " + esc(String(actor.wallet).slice(0, 8)) + "…</span></span>" +
+        "</span>" +
+        '<span class="check">✓</span>';
+      row.onclick = () => {
+        selectedActor = actor;
+        list.querySelectorAll(".persona").forEach((el) => el.classList.remove("active"));
+        row.classList.add("active");
+        btn.disabled = false;
+        btnLabel.textContent = "Enter as " + displayName(actor);
+      };
+      list.appendChild(row);
+    });
+
+    if (actors.length > 0) {
+      list.querySelector(".persona").click();
+    } else {
+      $id("demo-wrap").classList.add("hidden");
+    }
+  }
+
+  $id("persona-btn").onclick = async () => {
+    if (!selectedActor) return;
+    const btn = $id("persona-btn");
+    const btnLabel = $id("persona-btn-label");
+    clearBanner();
+    btn.disabled = true;
+    btnLabel.textContent = "Signing in…";
+    try {
+      // Wallet-signature (SIWS) login against the seeded account's keypair.
+      const session = await ensureSession(selectedActor.name);
+      writeSession({
+        token: session.token,
+        user: session.user,
+        username: selectedActor.name,
+        provider: "demo",
+        wallet: selectedActor.wallet,
+        secretKeyB58: session.secretKeyB58,
+      });
+      showBanner("ok", "Signed in as <strong>" + esc(selectedActor.name) + "</strong>. Redirecting…");
+      setTimeout(() => (window.location.href = destinationFor(session.user.role)), 400);
+    } catch (err) {
+      showBanner("err", esc(err.message || "Demo sign-in failed"));
+      btn.disabled = false;
+      btnLabel.textContent = "Enter as " + displayName(selectedActor);
+    }
+  };
+
+  // --- boot: what does this deployment offer? -------------------------------
+  (async function boot() {
+    let meta = { auth0: { configured: false, domain: null }, demo: { enabled: false } };
+    try {
+      meta = await api("GET", "/meta/auth");
+    } catch (err) {
+      /* fall through to the email form */
+    }
+
+    const auth0Wrap = $id("auth0-wrap");
+    const auth0Missing = $id("auth0-missing");
+    const demoWrap = $id("demo-wrap");
+    let auth0Ready = false;
+    let demoReady = false;
+
+    if (meta.auth0 && meta.auth0.configured) {
+      auth0Ready = true;
+      auth0Wrap.classList.remove("hidden");
+      $id("auth0-domain").textContent = meta.auth0.domain || "Auth0";
+      const next = params.get("next");
+      $id("auth0-btn").href =
+        "/auth/auth0/login" + (next && /^\/(?!\/)/.test(next) ? "?next=" + encodeURIComponent(next) : "");
+    } else {
+      auth0Missing.classList.remove("hidden");
+      // Name the URLs this deployment actually uses: AUTH0_CALLBACK_URL can point
+      // at any path the tenant whitelists, so a hardcoded one would send people to
+      // register a callback the server does not serve.
+      $id("auth0-callback").textContent = meta.auth0.redirectUri || window.location.origin + "/auth/auth0/callback";
+      const logoutEl = $id("auth0-logout");
+      if (logoutEl) logoutEl.textContent = meta.auth0.logoutReturnTo || window.location.origin + "/login";
+      $id("auth0-origin").textContent = window.location.origin;
+    }
+
+    if (meta.demo && meta.demo.enabled) {
+      try {
+        const actors = (await api("GET", "/demo/actors")).actors || [];
+        const usable = actors.filter((a) => a.role === "client" || a.role === "freelancer");
+        if (usable.length > 0) {
+          demoReady = true;
+          demoWrap.classList.remove("hidden");
+          renderPersonas(usable);
+        }
+      } catch (err) {
+        /* demo actors unavailable — the email form still works */
+      }
+    }
+
+    // Hosted Auth0 is the front door. The local demo/email path is only offered
+    // when Auth0 cannot sign anyone in on this server, when a deep link asks for a
+    // specific local form (?mode=admin|signup|forgot|reset), or when it is
+    // requested explicitly with ?demo=1.
+    const deepLink = mode !== "login";
+    const forcedDemo = params.get("demo") === "1";
+    const localSignIn = !auth0Ready || deepLink || forcedDemo;
+    fallback.classList.toggle("hidden", !(localSignIn || demoReady));
+    // Always collapsed: the local path is an escape hatch, never the opening view.
+    setFallbackOpen(deepLink || forcedDemo);
+    showEmail(deepLink || forcedDemo || (!auth0Ready && !demoReady));
+
+    // A finished Auth0 round trip comes back as a one-time code.
+    const handoff = params.get("auth0");
+    if (handoff) {
+      try {
+        const res = await api("POST", "/auth/auth0/handoff", { code: handoff });
+        const session = storeSession(res, "auth0");
+        showBanner(
+          "ok",
+          "Signed in as <strong>" + esc(res.username) + "</strong> via <strong>Auth0</strong>" +
+            (params.get("created") ? " (new account)" : "") + ". Redirecting…",
+        );
+        setTimeout(() => (window.location.href = destinationFor(session.role)), 600);
+      } catch (err) {
+        showBanner("err", esc(err.message || "Auth0 sign-in failed"));
+      }
+    } else if (params.get("error")) {
+      showBanner("err", "Authentication failed: " + esc(params.get("error")));
+    }
+  })();
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    clearBanner();
+    submitBtn.disabled = true;
+    const original = submitBtn.textContent;
+    submitBtn.textContent = "Working…";
+
+    try {
+      if (mode === "login") {
+        const identity = $id("identity").value.trim();
+        const password = $id("password").value;
+        if (!identity || !password) throw new Error("Enter your email/username and password.");
+        const body = { password };
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity)) body.email = identity;
+        else body.username = identity;
+        const res = await api("POST", "/auth/login", body);
+        const session = storeSession(res, "password");
+        showBanner("ok", "Signed in as <strong>" + esc(res.username) + "</strong>. Redirecting…");
+        setTimeout(() => (window.location.href = destinationFor(session.role)), 400);
+        return;
+      }
+
+      if (mode === "signup") {
+        const email = $id("signup-email").value.trim();
+        const password = $id("signup-password").value;
+        const res = await api("POST", "/auth/signup", { email, password, role });
+        storeSession(res, "password");
+        const tok = res.verification_token
+          ? '<br />Dev verification token: <code>' + esc(res.verification_token) + '</code>'
+          : "";
+        showBanner("ok", "Account created as <strong>" + esc(res.username) + "</strong>." + tok + "<br />Redirecting…");
+        setTimeout(() => (window.location.href = destinationFor(res.user.role)), 900);
+        return;
+      }
+
+      if (mode === "admin") {
+        const username = $id("admin-username").value.trim();
+        const password = $id("admin-password").value;
+        const secret = $id("admin-secret").value;
+        const res = await api("POST", "/auth/admin-signup", { username, password }, undefined, {
+          headers: { "x-admin-setup-secret": secret },
+        });
+        const session = storeSession(res, "password");
+        showBanner("ok", "Admin <strong>" + esc(res.username) + "</strong> provisioned. Redirecting…");
+        setTimeout(() => (window.location.href = destinationFor(session.role)), 500);
+        return;
+      }
+
+      if (mode === "forgot") {
+        const email = $id("forgot-email").value.trim();
+        const res = await api("POST", "/auth/forgot-password", { email });
+        let extra = "";
+        if (res.reset_token) {
+          extra = '<br />Dev reset token: <code>' + esc(res.reset_token) + '</code>';
+        }
+        showBanner("ok", esc(res.message || "Check your inbox.") + extra);
+        submitBtn.disabled = false;
+        submitBtn.textContent = original;
+        return;
+      }
+
+      if (mode === "reset") {
+        const token = $id("reset-token").value.trim();
+        const password = $id("reset-password").value;
+        await api("POST", "/auth/reset-password", { token, password });
+        showBanner("ok", "Password updated. You can sign in now.");
+        setTimeout(() => setMode("login"), 900);
+        return;
+      }
+    } catch (err) {
+      showBanner("err", esc(err.message || "Something went wrong"));
+      submitBtn.disabled = false;
+      submitBtn.textContent = original;
+    }
+  };
+
+  setMode(mode, { token: params.get("token") || "" });
+})();
+</script>
+</body>
+</html>

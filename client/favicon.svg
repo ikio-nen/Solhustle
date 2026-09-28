@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Drawn a touch heavier than the nav mark: at 16px in a browser tab the
+       hairline strokes of the full-size logo would disappear. -->
+  <rect width="32" height="32" rx="7" fill="#23252c"/>
+  <path d="M14.4 4 5.3 9.5v13l9.1 5.5" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.6 4 26.7 9.5v13L17.6 28" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 12.2 19.4 16 16 19.8 12.6 16Z" fill="#d8f75a"/>
+</svg>

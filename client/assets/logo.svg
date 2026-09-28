@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 154 32" width="154" height="32" role="img" aria-label="Solhustle">
+  <title>Solhustle</title>
+  <rect width="32" height="32" rx="8" fill="#23252c"/>
+  <path d="M14.6 4.2 5.6 9.6v12.8l9 5.4" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.4 4.2 26.4 9.6v12.8l-9 5.4" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 12.4 19.1 16 16 19.6 12.9 16Z" fill="#d8f75a"/>
+  <text x="43" y="21.6" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Inter, Roboto, sans-serif" font-size="17.5" font-weight="700" letter-spacing="-0.4" fill="#23252c">Solhustle</text>
+</svg>

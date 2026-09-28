@@ -13,6 +13,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "public"]
+  "include": ["server/**/*.ts"],
+  "exclude": ["node_modules", "client"]
 }

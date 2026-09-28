@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solhustle</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#23252c" />
+  <meta name="description" content="Escrow-backed freelance work on Solana. Lock the budget in a vault, release it when you approve the work." />
+  <link rel="stylesheet" href="/style.css" />
+  <script>document.documentElement.classList.add("js-motion");</script>
+</head>
+<body class="app-body">
+  <!-- One nav for the whole product. Its links come from the account's role and
+       entitlements, which is why there is no portal switcher any more. -->
+  <header class="app-nav" id="app-nav"></header>
+
+  <main id="view" class="app-main" aria-live="polite">
+    <div class="card dim">Loading…</div>
+  </main>
+
+  <footer class="app-foot">
+    <span>Solhustle — escrow-backed freelance work on Solana devnet</span>
+    <span class="row gap-8">
+      <a class="link" href="/">Home</a>
+      <a class="link" href="/browse">Browse talent</a>
+      <a class="link" href="#" id="foot-signout">Sign out</a>
+    </span>
+  </footer>
+
+  <script src="/vendor/nacl-fast.min.js"></script>
+  <script src="/vendor/solana-web3.min.js"></script>
+  <script src="/common.js"></script>
+  <script src="/motion.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

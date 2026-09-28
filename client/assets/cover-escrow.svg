@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-label="Escrow flow: client funds a vault, the vault releases to a freelancer on approval">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbfcf9"/>
+      <stop offset="1" stop-color="#eef2e6"/>
+    </linearGradient>
+    <linearGradient id="vault" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2e36"/>
+      <stop offset="1" stop-color="#1b1d23"/>
+    </linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#23252c" flood-opacity="0.16"/>
+    </filter>
+    <marker id="arw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8a9a3c"/>
+    </marker>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#23252c" opacity="0.09"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <rect width="1200" height="800" fill="url(#grid)"/>
+
+  <!-- flowing funds: client -> vault -> freelancer -->
+  <path d="M250 400 H470" stroke="#8a9a3c" stroke-width="6" stroke-linecap="round" marker-end="url(#arw)" fill="none"/>
+  <path d="M730 400 H950" stroke="#8a9a3c" stroke-width="6" stroke-linecap="round" marker-end="url(#arw)" fill="none"/>
+
+  <!-- client node -->
+  <g filter="url(#soft)">
+    <rect x="60" y="300" width="190" height="200" rx="22" fill="#ffffff" stroke="#dcded4"/>
+  </g>
+  <circle cx="155" cy="360" r="26" fill="#f2f6e4"/>
+  <path d="M143 366 a12 12 0 0 1 24 0" stroke="#5d6b26" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <circle cx="155" cy="354" r="7" fill="#5d6b26"/>
+  <text x="155" y="424" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700" fill="#23252c">Client</text>
+  <text x="155" y="454" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" fill="#6b7280">posts &amp; funds</text>
+
+  <!-- vault node -->
+  <g filter="url(#soft)">
+    <rect x="470" y="250" width="260" height="300" rx="28" fill="url(#vault)"/>
+  </g>
+  <circle cx="600" cy="380" r="74" fill="none" stroke="#d8f75a" stroke-width="7"/>
+  <circle cx="600" cy="380" r="40" fill="none" stroke="#d8f75a" stroke-width="4" opacity="0.55"/>
+  <path d="M600 380 L600 342" stroke="#d8f75a" stroke-width="7" stroke-linecap="round"/>
+  <path d="M600 380 L631 399" stroke="#d8f75a" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="600" cy="380" r="9" fill="#d8f75a"/>
+  <text x="600" y="497" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22" font-weight="700" fill="#f4f6ef">Escrow vault</text>
+  <text x="600" y="524" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="16" fill="#a9ada0">job #21 · 0.2058 SOL</text>
+
+  <!-- freelancer node -->
+  <g filter="url(#soft)">
+    <rect x="950" y="300" width="190" height="200" rx="22" fill="#ffffff" stroke="#dcded4"/>
+  </g>
+  <circle cx="1045" cy="360" r="26" fill="#f2f6e4"/>
+  <path d="M1045 346 l16 9 v18 l-16 9 -16 -9 v-18 z" fill="none" stroke="#5d6b26" stroke-width="4" stroke-linejoin="round"/>
+  <text x="1045" y="424" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700" fill="#23252c">Freelancer</text>
+  <text x="1045" y="454" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" fill="#6b7280">delivers work</text>
+
+  <!-- release condition -->
+  <rect x="200" y="618" width="800" height="96" rx="20" fill="#ffffff" stroke="#dcded4"/>
+  <circle cx="248" cy="666" r="16" fill="#e9f6ef"/>
+  <path d="M241 666 l5 6 11 -12" stroke="#0b7a45" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="284" y="660" font-family="ui-sans-serif, system-ui, sans-serif" font-size="21" font-weight="650" fill="#23252c">Nothing moves without an approval</text>
+  <text x="284" y="688" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17" fill="#6b7280">Release, refund, or arbitration — the vault waits for a ruling either way.</text>
+</svg>

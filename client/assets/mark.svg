@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Solhustle">
+  <title>Solhustle</title>
+  <rect width="32" height="32" rx="8" fill="#23252c"/>
+  <!-- Two vault halves that hook together: the client's side and the freelancer's,
+       each incomplete without the other. They do not quite meet at the top and
+       bottom vertices — that seam is the point. -->
+  <path d="M14.6 4.2 5.6 9.6v12.8l9 5.4" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.4 4.2 26.4 9.6v12.8l-9 5.4" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- The deposit held inside the vault. -->
+  <path d="M16 12.4 19.1 16 16 19.6 12.9 16Z" fill="#d8f75a"/>
+</svg>

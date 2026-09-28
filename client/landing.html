@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en" data-smooth-scroll>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solhustle — Escrow-backed freelance work on Solana</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#23252c" />
+  <meta name="description" content="Post work, lock the budget in an isolated Solana vault, and release payment only when you approve it. No trust required, every settlement verifiable on-chain." />
+  <link rel="stylesheet" href="/style.css" />
+  <!-- Set before first paint so `[data-reveal]` elements start hidden without a
+       flash. Without JS the class never lands and everything is simply visible. -->
+  <script>document.documentElement.classList.add("js-motion");</script>
+</head>
+<body>
+<main>
+  <!-- Hero: copy on the left, a real product frame on the right. -->
+  <section class="hero-landing">
+    <div class="hero-copy">
+    <span class="net-badge pulse" data-reveal><span class="dot"></span>Live on Solana devnet</span>
+    <h1 class="display-tight" data-reveal data-reveal-delay="60">
+      Freelance work, paid through <em>on-chain escrow</em>.
+    </h1>
+    <p class="lede" data-reveal data-reveal-delay="120">
+      Post a contract and lock the budget in an isolated Solana vault. The money moves when the
+      work is approved — or when an arbiter rules. Every deposit, release and refund is a real
+      transaction you can open on Solscan.
+    </p>
+    <div class="row" data-reveal data-reveal-delay="180">
+      <a class="btn btn-pill" href="/signup" style="font-size:15px;">Start a contract free <span class="arw">→</span></a>
+      <a class="btn sec btn-pill" href="/login" style="font-size:15px;">Sign in</a>
+    </div>
+    <div class="stat-row" data-reveal data-reveal-delay="240">
+      <div class="stat"><b id="stat-rate">…</b><span>1 SOL in USD</span></div>
+      <div class="stat"><b id="stat-network">devnet</b><span>Settlement layer</span></div>
+      <div class="stat"><b>Ed25519</b><span>Signed in-browser</span></div>
+      <div class="stat"><b>No extension</b><span>Nothing to install</span></div>
+    </div>
+    </div>
+    <div class="hero-art" data-reveal data-reveal-delay="300">
+      <img src="/assets/hero-app.svg" width="1400" height="900"
+           alt="Solhustle dashboard: contracts hiring and freelancing side by side, an escrow balance, and a delivery awaiting approval with screenshots and a repo link" />
+      <span class="hero-art-glow" aria-hidden="true"></span>
+    </div>
+  </section>
+
+  <!-- Auto-scrolling stack ticker. `motion.js` duplicates the track so one -50%
+       keyframe pass loops seamlessly; hovering pauses it. Marked decorative so
+       the cloned half is not announced twice. -->
+  <div class="marquee" data-marquee aria-hidden="true">
+    <div class="marquee-track">
+      <span class="marquee-item"><b>Solana</b> devnet</span>
+      <span class="marquee-item"><b>SystemProgram</b> escrow vaults</span>
+      <span class="marquee-item"><b>Ed25519</b> in-browser signing</span>
+      <span class="marquee-item"><b>Neon</b> Postgres</span>
+      <span class="marquee-item"><b>Gemini</b> SOL/USD oracle</span>
+      <span class="marquee-item"><b>Solscan</b> settlement proof</span>
+      <span class="marquee-item"><b>Auth0</b> universal login</span>
+    </div>
+  </div>
+
+  <!-- The product, shown as the product. Real screens, not stock art. -->
+  <h2 class="section-title" id="product" data-reveal>Inside the product</h2>
+  <div class="shots">
+    <figure class="shot shot--wide" data-reveal>
+      <img src="/assets/cover-anchor.svg" alt="Anchor escrow program source with its passing test suite" loading="lazy" decoding="async" />
+      <figcaption>
+        <b>Enforced at the program, not the policy page</b>
+        <span>Transfers are gated by the escrow logic itself — including the rent floor — with the test suite to prove it.</span>
+      </figcaption>
+    </figure>
+    <figure class="shot" data-reveal data-reveal-delay="80">
+      <img src="/assets/cover-escrow.svg" alt="Escrow flow: a client funds a vault, which releases to a freelancer only on approval" loading="lazy" decoding="async" />
+      <figcaption>
+        <b>Funds locked, not promised</b>
+        <span>The budget leaves the client's wallet before work starts, into a vault for that job alone.</span>
+      </figcaption>
+    </figure>
+    <figure class="shot" data-reveal data-reveal-delay="160">
+      <img src="/assets/cover-explorer.svg" alt="Block explorer showing a vault's locked balance and its deposit and release transactions" loading="lazy" decoding="async" />
+      <figcaption>
+        <b>Every settlement on-chain</b>
+        <span>Deposits, releases and refunds are real devnet transactions you can open on Solscan.</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- How it works -->
+  <h2 class="section-title" id="how" data-reveal>How it works</h2>
+  <div class="grid">
+    <div class="card step lift" data-reveal>
+      <b>01 · Post the work</b>
+      <p class="dim">Describe the job and set a budget in USD. It is priced against the live SOL ticker and that snapshot is frozen for the contract.</p>
+    </div>
+    <div class="card step lift" data-reveal data-reveal-delay="80">
+      <b>02 · Lock the budget</b>
+      <p class="dim">One click signs a transfer into a vault that belongs to this job alone. The platform covers the rent so the address exists straight away.</p>
+    </div>
+    <div class="card step lift" data-reveal data-reveal-delay="160">
+      <b>03 · Deliver the work</b>
+      <p class="dim">Your freelancer pitches, delivers with a proof link, and the contract moves to a delivered state that only you can settle.</p>
+    </div>
+    <div class="card step lift" data-reveal data-reveal-delay="240">
+      <b>04 · Release or dispute</b>
+      <p class="dim">Approving pays straight out of the vault. If you disagree, the same vault goes to arbitration instead of a payment.</p>
+    </div>
+  </div>
+
+  <!-- Why escrow -->
+  <h2 class="section-title" id="why" data-reveal>Why escrow</h2>
+  <div class="grid">
+    <div class="card lift" data-reveal>
+      <h3 style="margin:0 0 8px;">The money can't move on its own</h3>
+      <p class="dim" style="margin:0; font-size:14px;">
+        Funds sit in a vault neither side controls alone. Nothing is released without an approval
+        or an arbiter's ruling, so a bad week for either party can't turn into a lost payment.
+      </p>
+    </div>
+    <div class="card lift" data-reveal data-reveal-delay="80">
+      <h3 style="margin:0 0 8px;">Every settlement is verifiable</h3>
+      <p class="dim" style="margin:0; font-size:14px;">
+        Each deposit, release and refund is a real devnet transaction with a signature you can
+        check on Solscan. There is nothing to take on faith and no ledger to argue about.
+      </p>
+    </div>
+    <div class="card lift" data-reveal data-reveal-delay="160">
+      <h3 style="margin:0 0 8px;">Disagreements have an exit</h3>
+      <p class="dim" style="margin:0; font-size:14px;">
+        Escalate a stuck contract and it lands in an arbitration queue with both sides' evidence
+        attached. The ruling releases the vault one way or the other.
+      </p>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <h2 class="section-title" id="faq" data-reveal>FAQ</h2>
+  <div class="card" data-reveal>
+    <details class="faq">
+      <summary>Do I need a crypto wallet extension?</summary>
+      <p>No. Keys are generated for your account on the server and used to sign inside the page, so the flow works in any browser without installing anything.</p>
+    </details>
+    <details class="faq">
+      <summary>What does it cost?</summary>
+      <p>Only the Solana network fee, roughly 0.000005 SOL per transaction. The vault's rent deposit is returned when the contract closes.</p>
+    </details>
+    <details class="faq">
+      <summary>What happens if the freelancer disappears?</summary>
+      <p>The contract can be escalated to arbitration, and a ruling can refund the vault to you. The funds never sit in limbo with no way out.</p>
+    </details>
+    <details class="faq">
+      <summary>Is this running on mainnet?</summary>
+      <p>Not yet — everything settles on Solana devnet while the escrow program is still an account-based MVP rather than a deployed Anchor program.</p>
+    </details>
+  </div>
+
+  <!--
+    The team lives at the end of the landing page rather than on a route of its
+    own: it is the last thing a visitor should read before the CTA, and a
+    six-card page nobody links to twice was a dead end.
+  -->
+  <h2 class="section-title" id="creators" data-reveal>The people behind Solhustle</h2>
+  <p class="lede crew-lede" data-reveal>
+    A hackathon-sized team: one person on the escrow program, one on the ledger behind it, one on the
+    shell everyone else builds inside. Everything here settles on Solana devnet with real
+    transactions you can open on Solscan.
+  </p>
+  <section class="crew-grid">
+    <article class="crew-card" data-reveal data-reveal-delay="40">
+      <div class="crew-art crew-art--photo" aria-hidden="true">
+        <img src="/assets/crew/adri-bhowmik.jpg" alt="" loading="lazy" decoding="async" />
+      </div>
+      <h3 class="crew-name">Adri Bhowmik</h3>
+      <p class="crew-role">Program &amp; escrow lead</p>
+      <p class="crew-bio">
+        Wrote the vault: initialize, fund, release, refund — and the arbiter path that settles a
+        dispute without either side holding the keys.
+      </p>
+      <div class="chips"><span class="chip">Anchor</span><span class="chip">Rust</span><span class="chip">PDAs</span></div>
+    </article>
+
+    <article class="crew-card" data-reveal data-reveal-delay="80">
+      <div class="crew-art crew-art--photo" aria-hidden="true">
+        <img src="/assets/crew/saswata-howladar.jpg" alt="" loading="lazy" decoding="async" />
+      </div>
+      <h3 class="crew-name">Saswata Howladar</h3>
+      <p class="crew-role">Ledger &amp; backend</p>
+      <p class="crew-bio">
+        Owns the API, the SQLite ledger, and the Neon mirror that keeps contracts, deliveries and
+        escrow transactions in step when a settlement lands.
+      </p>
+      <div class="chips"><span class="chip">TypeScript</span><span class="chip">SQLite</span><span class="chip">Neon</span></div>
+    </article>
+
+    <article class="crew-card" data-reveal data-reveal-delay="120">
+      <div class="crew-art crew-art--photo" aria-hidden="true">
+        <img src="/assets/crew/souradip-ghosh.jpg" alt="" loading="lazy" decoding="async" />
+      </div>
+      <h3 class="crew-name">Souradip Ghosh</h3>
+      <p class="crew-role">Product &amp; frontend</p>
+      <p class="crew-bio">
+        Built the single app shell and the hash router that replaced three separate portals — and
+        the chat clients now use to reach freelancers directly.
+      </p>
+      <div class="chips"><span class="chip">Vanilla JS</span><span class="chip">a11y</span><span class="chip">CSS</span></div>
+    </article>
+
+    <article class="crew-card" data-reveal data-reveal-delay="160">
+      <div class="crew-art crew-art--photo" aria-hidden="true">
+        <img src="/assets/crew/suryya-sekhar-maiti.jpg" alt="" loading="lazy" decoding="async" />
+      </div>
+      <h3 class="crew-name">Suryya Sekhar Maiti</h3>
+      <p class="crew-role">Design systems</p>
+      <p class="crew-bio">
+        Type scale, motion, and the vault mark itself: two halves that only close around the deposit
+        when both sides agree.
+      </p>
+      <div class="chips"><span class="chip">SVG</span><span class="chip">Motion</span><span class="chip">Brand</span></div>
+    </article>
+
+    <article class="crew-card" data-reveal data-reveal-delay="200">
+      <div class="crew-art crew-art--photo" aria-hidden="true">
+        <img src="/assets/crew/sumita-das.jpg" alt="" loading="lazy" decoding="async" />
+      </div>
+      <h3 class="crew-name">Sumita Das</h3>
+      <p class="crew-role">Community &amp; growth</p>
+      <p class="crew-bio">
+        Runs onboarding, writes the demo story, and keeps the directory somewhere a client can
+        actually find a freelancer worth hiring.
+      </p>
+      <div class="chips"><span class="chip">Editorial</span><span class="chip">Directory</span></div>
+    </article>
+
+    <article class="crew-card" data-reveal data-reveal-delay="240">
+      <!-- No photo yet: the initials plate stays as the blank slot. -->
+      <div class="crew-art crew-art--6" aria-hidden="true"><span>TA</span></div>
+      <h3 class="crew-name">Tapo</h3>
+      <p class="crew-role">Security &amp; operations</p>
+      <p class="crew-bio">
+        Sessions and revocation, rate limits, upload sandboxing, and the audit trail staff read in
+        the operator console when a payout looks wrong.
+      </p>
+      <div class="chips"><span class="chip">Auth</span><span class="chip">CSP</span><span class="chip">Audit</span></div>
+    </article>
+  </section>
+
+  <div class="card crew-foot" data-reveal>
+    <h3 class="h-sub">Want to work with this team?</h3>
+    <p class="dim">
+      Hire one of them from the directory, or open a contract and let the escrow vault hold the
+      budget until you approve the delivery.
+    </p>
+    <div class="row gap-8 wrap crew-cta">
+      <a class="btn btn-pill" href="/browse">Browse talent</a>
+      <a class="btn sec" href="/signup">Create an account</a>
+    </div>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <span class="row" style="gap:10px;">
+    <span class="brand-mark brand-mark--sm" aria-hidden="true">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M14.6 4.2 5.6 9.6v12.8l9 5.4" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M17.4 4.2 26.4 9.6v12.8l-9 5.4" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 12.4 19.1 16 16 19.6 12.9 16Z" class="brand-gem"/>
+      </svg>
+    </span>
+    Solhustle · escrow-backed freelance work
+  </span>
+  <span class="row">
+    <a href="/#creators">Creators</a>
+    <a href="/login">Sign in</a>
+    <a href="/signup">Get started</a>
+    <a href="https://solscan.io/?cluster=devnet" target="_blank" rel="noopener">Solscan ↗</a>
+  </span>
+</footer>
+
+<script src="/common.js"></script>
+<script src="/motion.js"></script>
+<script>
+  renderNavbar("landing");
+
+  (async function loadMeta() {
+    try {
+      const net = await api("GET", "/meta/network");
+      const el = $("#stat-network");
+      if (el) el.textContent = net.chain === "devnet" ? "devnet" : net.chain;
+    } catch {
+      /* keep the default label */
+    }
+  })();
+
+  async function loadPrice() {
+    try {
+      const p = await api("GET", "/meta/price");
+      const stat = $("#stat-rate");
+      if (stat) stat.textContent = "$" + Number(p.rate).toFixed(2);
+    } catch {
+      const stat = $("#stat-rate");
+      if (stat) stat.textContent = "—";
+    }
+  }
+  loadPrice();
+  setInterval(loadPrice, 30000);
+</script>
+</body>
+</html>

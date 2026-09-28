@@ -1,0 +1,1 @@
+Auth0 as identity + keep the existing wallet-signing escrow flow. New users sign up via Auth0 (or a signup gate), bind/prove a wallet, and funding still uses the buyer’s Ed25519-signed SystemProgram.transfer. This keeps job 26 and the funded jobs’ proof model unchanged.

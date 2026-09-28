@@ -4,11 +4,13 @@
   "description": "Solhustle — Solana Escrow Freelance Marketplace",
   "type": "module",
   "scripts": {
-    "start": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env src/server.ts",
-    "dev": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env --watch src/server.ts",
-    "seed": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env src/seed.ts",
-    "demo-story": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env src/demo-story.ts",
-    "test": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env --test tests/e2e.test.ts",
+    "start": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env server/server.ts",
+    "dev": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env --watch server/server.ts",
+    "seed": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env server/seed.ts",
+    "demo-story": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env server/demo-story.ts",
+    "test": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env --test server/tests/*.test.ts",
+    "test:auth": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --test server/tests/auth.test.ts",
+    "test:e2e": "node --dns-result-order=ipv4first --experimental-strip-types --experimental-transform-types --env-file-if-exists=.env --test server/tests/e2e.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "pnpm@12.6.0",
