@@ -15,6 +15,9 @@ const state = {
   skills: [],
   taxonomy: null,
   route: { name: "dashboard" },
+  // The response from the last rule/confirm in this tab. Kept so the case view can
+  // show what the arbiter was *offered* to cite, which the server does not store.
+  lastRuling: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -37,6 +40,8 @@ const VIEWS = {
   profile: viewProfile,
   me: viewMe,
   operator: viewOperator,
+  cases: viewCases,
+  case: viewCase,
 };
 
 const AFTER = {
@@ -48,6 +53,8 @@ const AFTER = {
   profile: afterProfile,
   me: afterMe,
   operator: afterOperator,
+  cases: afterCases,
+  case: afterCase,
 };
 
 const ent = () => sessionRoles(state.session);
@@ -71,6 +78,9 @@ function parseHash(hash) {
   if (parts[0] === "browse") return { name: "browse" };
   if (parts[0] === "work") return { name: "work" };
   if (parts[0] === "freelancer") return { name: "profile", id: Number(parts[1]) };
+  if (parts[0] === "cases") {
+    return parts[1] ? { name: "case", id: Number(parts[1]) } : { name: "cases" };
+  }
   if (parts[0] === "me") return { name: "me" };
   if (parts[0] === "operator") return { name: "operator" };
   return { name: "dashboard" };
@@ -84,6 +94,8 @@ function resolveRoute() {
   if (p === "/work") return { name: "work" };
   if (p.startsWith("/freelancer/")) return { name: "profile", id: Number(p.split("/")[2]) };
   if (p === "/operator") return { name: "operator" };
+  if (p === "/cases") return { name: "cases" };
+  if (p.startsWith("/cases/")) return { name: "case", id: Number(p.split("/")[2]) };
   if (p === "/me") return { name: "me" };
   return { name: "dashboard" };
 }
@@ -104,6 +116,7 @@ function activeKey(r) {
   if (r.name === "work") return "/work";
   if (r.name === "me") return "/me";
   if (r.name === "operator") return "/operator";
+  if (r.name === "cases" || r.name === "case") return "/cases";
   return "/";
 }
 
@@ -184,9 +197,12 @@ async function render() {
     location.href = `/login?next=${encodeURIComponent(location.pathname)}`;
     return;
   }
-  if (state.route.name === "operator" && !isStaff(state.session)) {
-    $("#view").innerHTML = pageHeader("Operator console", "Staff only") +
-      `<div class="card"><p class="dim">This console is limited to staff accounts. If you need access, ask an operator to grant it.</p>
+  // The adjudication surfaces are staff-only server-side as well; this only saves
+  // rendering a page that would fail every call.
+  const STAFF_ONLY = ["operator", "cases", "case"];
+  if (STAFF_ONLY.includes(state.route.name) && !isStaff(state.session)) {
+    $("#view").innerHTML = pageHeader("Staff only", "Adjudication") +
+      `<div class="card"><p class="dim">Cases and the operator console are limited to staff accounts. If you need access, ask an operator to grant it.</p>
        <a class="btn sec" href="/app#/">Back to dashboard</a></div>`;
     return;
   }
@@ -1340,6 +1356,260 @@ async function viewOperator() {
 }
 
 // ---------------------------------------------------------------------------
+// Cases — the evidence-to-ruling engine.
+//
+// The screen where a staff member reads a case the way the arbiter read it. Two
+// things are shown deliberately differently: the *stored* evidence, exactly as the
+// party wrote it, and — separately — whatever was withheld from the model. A
+// reviewer who could not tell those apart could trust neither.
+// ---------------------------------------------------------------------------
+
+/**
+ * The rails and their remedies.
+ *
+ * Fetched from the rulebook that owns them rather than repeated here: a second
+ * copy of the remedy ids in the client is exactly how a console ends up offering
+ * a decision the engine no longer has.
+ */
+async function rulebookIndex() {
+  const r = await api("GET", "/arbiter/rulebooks", undefined, TOKEN()).catch(() => ({ rulebooks: [] }));
+  const index = {};
+  for (const rb of r.rulebooks || []) index[rb.id] = rb;
+  return index;
+}
+
+const remedyOf = (index, rulebookId, remedyId) => {
+  const rb = index[rulebookId];
+  return rb ? (rb.remedies || []).find((x) => x.id === remedyId) || null : null;
+};
+
+const kvHtml = (pairs) =>
+  `<div class="kv">${pairs
+    .filter(([, v]) => v !== null && v !== undefined && v !== "")
+    .map(([k, v]) => `<span class="k">${esc(k)}</span><span>${esc(String(v))}</span>`)
+    .join("")}</div>`;
+
+/** A window chip: green while the zero-liability window is open, red once it has gone. */
+function windowChip(deadline) {
+  if (!deadline) return `<span class="chip dim">no statutory clock</span>`;
+  const kind = deadline.liabilityBand === "zero" ? "ok" : deadline.liabilityBand === "limited" ? "warn" : "err";
+  const left = deadline.expired
+    ? `closed ${fmtDate(deadline.dueAt)}`
+    : `${deadline.workingDaysRemaining} working day${deadline.workingDaysRemaining === 1 ? "" : "s"} left`;
+  return `<span class="chip ${kind}">${esc(deadline.label)}</span> <span class="dim small">${esc(left)}</span>`;
+}
+
+/** Evidence refs are JSON arrays of URLs on most rows; render whatever is a link. */
+function refLinks(raw) {
+  const urls = String(raw).match(/https?:\/\/[^\s",\]]+/g) || [];
+  if (!urls.length) return esc(raw);
+  return urls
+    .map((u, i) => `<a class="link" href="${esc(u)}" target="_blank" rel="noopener">${i === 0 ? "Attachment" : `Attachment ${i + 1}`}</a>`)
+    .join(" · ");
+}
+
+async function viewCases() {
+  const [list, index] = await Promise.all([
+    api("GET", "/arbiter/cases", undefined, TOKEN()),
+    rulebookIndex(),
+  ]);
+  const cases = Array.isArray(list.cases) ? list.cases : [];
+  const waiting = cases.filter((c) => c.status === "open" || c.status === "ruled").length;
+  const flagged = cases.filter((c) => c.suspicious).length;
+  const railName = (c) => (index[c.rail] && index[c.rail].name) || c.rail;
+
+  return `
+    ${pageHeader(
+      "Cases",
+      "Evidence in, a reasoned ruling out — with the precedents it cites and anything withheld from it.",
+      `<button class="btn btn-pill btn-sm" id="new-case">Open a case</button>`,
+    )}
+    <div class="card" data-reveal>
+      <h3 class="h-sub">Queue <span class="dim">(${cases.length})</span></h3>
+      <p class="dim small">
+        ${waiting} still to settle${flagged ? ` · ${flagged} carrying instruction-shaped evidence` : ""}.
+      </p>
+      ${cases.length
+        ? `<div class="stack-sm">${cases
+            .map(
+              (c) => `<a class="row between list-row" href="/app#/cases/${c.id}">
+            <div>
+              <b>#${c.id} ${esc(c.title)}</b>${c.suspicious ? ` <span class="chip err">flagged</span>` : ""}
+              <p class="dim small">
+                ${esc(railName(c))} · ${esc(c.party_ref || "no party reference")}${c.amount !== null && c.amount !== undefined ? ` · ${esc(String(c.amount))} ${esc(c.currency || "")}` : ""}
+              </p>
+              <p class="small">${windowChip(c.deadline)}</p>
+            </div>
+            <div class="row gap-8">${pill(c.status)}</div>
+          </a>`,
+            )
+            .join("")}</div>`
+        : `<p class="dim">No cases yet. Open one to see the engine work.</p>`}
+    </div>`;
+}
+
+async function viewCase() {
+  const id = state.route.id;
+  const [detail, history, index] = await Promise.all([
+    api("GET", `/arbiter/cases/${id}`, undefined, TOKEN()),
+    api("GET", `/arbiter/cases/${id}/rulings`, undefined, TOKEN()).catch(() => ({ rulings: [], quarantined_evidence: [] })),
+    rulebookIndex(),
+  ]);
+  const c = detail.case;
+  const evidence = detail.evidence || [];
+  const rulings = history.rulings || [];
+  const quarantine = history.quarantined_evidence || [];
+  const settled = c.status === "confirmed" || c.status === "closed";
+  const latest = rulings[0] || null;
+  // Only the response that produced the newest ruling can show what was offered to
+  // cite; the server keeps the citations and not the offers, which live in the audit
+  // trail instead.
+  const live = state.lastRuling && latest && state.lastRuling.ruling.id === latest.id ? state.lastRuling : null;
+
+  const deadlineHtml = detail.deadline
+    ?      kvHtml([
+        ["window", detail.deadline.label],
+        ["zero liability closes (UTC)", utcDay(detail.deadline.dueAt)],
+        ["limited liability closes (UTC)", utcDay(detail.deadline.limitedUntil)],
+        ["working days left", detail.deadline.expired ? 0 : detail.deadline.workingDaysRemaining],
+      ])
+    : `<p class="dim small">No statute sets this clock. The contract governs, so there is no countdown to show.</p>`;
+
+  const evidenceHtml = evidence.length
+    ? evidence
+        .map(
+          (e) => `<div class="list-row">
+        <div class="row between">
+          <span class="mono">evidence:${e.id} · ${esc(e.source || "submitted")}</span>
+          <span class="dim small">${esc(e.kind)}${e.created_at ? ` · ${esc(fmtDate(e.created_at))}` : ""}</span>
+        </div>
+        <p class="evidence-body">${esc(e.body)}</p>
+        ${e.ref ? `<p class="small">${refLinks(e.ref)}</p>` : ""}
+      </div>`,
+        )
+        .join("")
+    : `<p class="dim">No evidence attached. A case cannot be ruled without it.</p>`;
+
+  const quarantineHtml = quarantine.length
+    ? `<div class="card" data-reveal>
+        <h3 class="h-sub">Withheld from the arbiter <span class="dim">(${quarantine.length})</span></h3>
+        <p class="dim small">
+          Instruction-shaped text found in the evidence. The wording is below for you to read; the model was
+          shown a placeholder instead, and the stored evidence above is unchanged.
+        </p>
+        <div class="stack-sm">${quarantine
+          .map(
+            (q) => `<div class="list-row">
+          <div class="row between">
+            <span class="mono">${esc(q.evidence_ref)} · ${esc(q.rule_id)}</span>
+            <span class="dim small">${q.ruling_id ? `ruling #${q.ruling_id}` : "not yet ruled"}</span>
+          </div>
+          <p class="evidence-body">${esc(q.snippet)}</p>
+        </div>`,
+          )
+          .join("")}</div>
+      </div>`
+    : "";
+
+  const rulingsHtml = rulings.length
+    ? rulings
+        .map((r, i) => {
+          const remedy = remedyOf(index, r.rulebook, r.decision);
+          const cited = r.cited_precedents || [];
+          const offered = i === 0 && live ? live.precedents || [] : null;
+          const uncited = offered ? offered.filter((p) => !(r.citations || []).some((x) => x.cited_ruling_id === p.id)) : [];
+          return `<div class="card" data-reveal>
+        <div class="row between">
+          <h3 class="h-sub">Ruling #${r.id}${i === 0 ? "" : ` <span class="dim">(superseded by #${rulings[0].id})</span>`}</h3>
+          <div class="row gap-8">
+            ${r.cached ? `<span class="chip dim">replayed from cache</span>` : ""}
+            ${remedy && remedy.movesFunds ? `<span class="chip warn">moves funds</span>` : `<span class="chip dim">moves no funds</span>`}
+          </div>
+        </div>
+        <p><b>${esc(remedy ? remedy.label : r.decision)}</b> <span class="mono dim">${esc(r.decision)}</span></p>
+        ${remedy ? `<p class="dim small">${esc(remedy.effect)}</p>` : ""}
+        ${kvHtml([
+          ["rulebook", r.rulebook],
+          ["liability band", r.liability_band],
+          ["confidence", r.confidence],
+          ["model", r.model],
+          ["decided", stamp(r.created_at)],
+        ])}
+        <p class="evidence-body">${esc(r.reasoning)}</p>
+        ${cited.length
+          ? `<h4 class="h-sub">Cited precedents</h4>
+             <div class="stack-sm">${cited
+               .map(
+                 (p) => `<div class="list-row">
+              <div class="row between">
+                <span>ruling #${p.ruling_id} · <a class="link" href="/app#/cases/${p.case_id}">case #${p.case_id}</a></span>
+                <span class="dim small">${esc(p.rulebook)} · ${esc(p.decision)}</span>
+              </div>
+              <p class="dim small">${esc(String(p.reasoning || "").slice(0, 240))}</p>
+            </div>`,
+               )
+               .join("")}</div>`
+          : `<p class="dim small">No precedent was cited for this ruling.</p>`}
+        ${offered
+          ? `<p class="dim small">
+               ${offered.length} precedent${offered.length === 1 ? "" : "s"} offered as citable, ${cited.length} cited${
+                 uncited.length ? ` — ${uncited.map((p) => `#${p.id}`).join(", ")} available and not relied on` : ""
+               }. The offered set is recorded in the audit trail.
+             </p>`
+          : ""}
+      </div>`;
+        })
+        .join("")
+    : `<div class="card" data-reveal><p class="dim">This case has not been ruled yet.</p></div>`;
+
+  const actions = settled
+    ? ""
+    : `<button class="btn btn-pill btn-sm" id="rule-case" data-case="${c.id}">${rulings.length ? "Rule again" : "Rule this case"}</button>${
+        latest
+          ? `<button class="btn sec btn-sm" id="confirm-case" data-case="${c.id}" data-moves="${
+              remedyOf(index, latest.rulebook, latest.decision) && remedyOf(index, latest.rulebook, latest.decision).movesFunds ? "1" : "0"
+            }" data-label="${esc(remedyOf(index, latest.rulebook, latest.decision) ? remedyOf(index, latest.rulebook, latest.decision).label : latest.decision)}">Confirm and apply</button>`
+          : ""
+      }`;
+
+  return `
+    ${pageHeader(`#${c.id} ${c.title}`, index[c.rail] ? index[c.rail].name : c.rail, actions)}
+    <div class="row gap-8" data-reveal>
+      ${pill(c.status)}
+      ${windowChip(detail.deadline)}
+      ${c.suspicious ? `<span class="chip err">instruction-shaped evidence</span>` : ""}
+    </div>
+    <div class="grid-2">
+      <div class="card" data-reveal>
+        <h3 class="h-sub">The report</h3>
+        ${kvHtml([
+          ["rail", index[c.rail] ? index[c.rail].name : c.rail],
+          ["party reference", c.party_ref],
+          ["amount", c.amount === null || c.amount === undefined ? null : `${c.amount} ${c.currency || ""}`.trim()],
+          ["transaction at", stamp(c.clock_started_at)],
+          ["recorded at", stamp(c.created_at)],
+          ["evidence items", evidence.length],
+        ])}
+      </div>
+      <div class="card" data-reveal>
+        <h3 class="h-sub">Governing clock</h3>
+        ${deadlineHtml}
+        ${detail.deadline
+          ? `<p class="dim small">${esc(detail.deadline.citation)}</p>
+             ${(detail.deadline.notes || []).map((n) => `<p class="dim small">${esc(n)}</p>`).join("")}`
+          : ""}
+      </div>
+    </div>
+    <div class="card" data-reveal>
+      <h3 class="h-sub">Evidence <span class="dim">(${evidence.length})</span></h3>
+      <p class="dim small">Stored exactly as submitted. This is what you are reviewing; the arbiter saw the same text with anything instruction-shaped replaced.</p>
+      ${evidenceHtml}
+    </div>
+    ${quarantineHtml}
+    ${rulingsHtml}`;
+}
+
+// ---------------------------------------------------------------------------
 // Messages — direct chat between clients and freelancers.
 //
 // Two panes: the inbox on the left, one conversation on the right. The open
@@ -1653,6 +1923,151 @@ function afterOperator() {
       }
     };
   });
+}
+
+/**
+ * Opening a case by hand.
+ *
+ * The escrow rail needs a contract to reason about; the UPI rail needs the
+ * transaction time, because that is what starts the RBI clock. Neither is guessed
+ * at here — a missing contract id is refused rather than turned into a case that
+ * can never be ruled.
+ */
+function afterCases() {
+  const btn = $("#new-case");
+  if (!btn) return;
+  btn.onclick = async () => {
+    await openFormModal({
+      title: "Open a case",
+      subtitle:
+        "A UPI report is judged against the RBI's reporting clock. An escrow dispute is judged against the contract.",
+      submitLabel: "Open the case",
+      fields: [
+        {
+          name: "rail",
+          label: "Rail",
+          type: "select",
+          value: "upi",
+          options: [
+            { value: "upi", label: "UPI fraud report (RBI clock)" },
+            { value: "escrow", label: "Escrow contract dispute" },
+          ],
+        },
+        { name: "title", label: "Title", required: true, maxlength: 200, autofocus: true, placeholder: "Unauthorised debit to an unknown VPA" },
+        { name: "party_ref", label: "Party reference", maxlength: 200, placeholder: "Ticket, complaint or bank reference" },
+        { name: "amount", label: "Amount in dispute", type: "number", min: 0 },
+        { name: "currency", label: "Currency", value: "INR", maxlength: 10 },
+        {
+          name: "clock_started_at",
+          label: "Transaction time",
+          type: "datetime-local",
+          placeholder: "UPI only — this starts the reporting clock",
+        },
+        { name: "job_id", label: "Contract id", placeholder: "Escrow only" },
+        {
+          name: "narrative",
+          label: "What happened",
+          type: "textarea",
+          rows: 6,
+          maxlength: 20000,
+          placeholder: "Paste the report as the customer wrote it. It is stored as evidence; nothing is rewritten.",
+        },
+      ],
+      onSubmit: async (values) => {
+        const body = { rail: values.rail, title: values.title };
+        if (values.party_ref) body.party_ref = values.party_ref;
+        if (values.amount !== "") body.amount = Number(values.amount);
+        if (values.currency) body.currency = values.currency;
+        if (values.clock_started_at) body.clock_started_at = new Date(values.clock_started_at).toISOString();
+        if (values.narrative) body.narrative = values.narrative;
+        if (values.rail === "escrow") {
+          const jobId = Number(values.job_id);
+          if (!Number.isInteger(jobId) || jobId <= 0) {
+            throw new Error("an escrow case needs the contract id it is about");
+          }
+          body.payload = { job_id: jobId };
+        }
+        const created = await api("POST", "/arbiter/cases", body, TOKEN());
+        toast(`Case #${created.case.id} opened`, "ok");
+        // The hash change re-renders; no second paint needed.
+        go(`/cases/${created.case.id}`);
+      },
+    });
+  };
+}
+
+function afterCase() {
+  const rule = $("#rule-case");
+  if (rule) rule.onclick = () => ruleTheCase(Number(rule.dataset.case));
+  const confirm = $("#confirm-case");
+  if (confirm) confirm.onclick = () => confirmTheCase(Number(confirm.dataset.case));
+}
+
+/**
+ * Rule a case.
+ *
+ * A ruling can take many seconds — the model is asked once and the answer is
+ * cached — so the button says what is happening rather than looking dead.
+ */
+async function ruleTheCase(caseId) {
+  const btn = $("#rule-case");
+  const label = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Ruling…";
+  }
+  try {
+    const result = await api("POST", `/arbiter/cases/${caseId}/rule`, {}, TOKEN());
+    state.lastRuling = result;
+    toast(result.cached ? "Ruling replayed from the cache" : "Ruling written", "ok");
+    render();
+  } catch (err) {
+    toast(err.message, "err");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+}
+
+/**
+ * The deliberate human step.
+ *
+ * On the escrow rail this settles the vault on Solana and cannot be undone, so it
+ * asks first and says so. On the UPI rail nothing moves — the confirmation records
+ * a finding — and the dialog says that instead, because an operator who believed
+ * money had been recovered would be badly misled.
+ */
+async function confirmTheCase(caseId) {
+  const btn = $("#confirm-case");
+  const moves = btn ? btn.dataset.moves === "1" : false;
+  const label = btn ? btn.dataset.label || "this ruling" : "this ruling";
+  const ok = await openConfirmModal({
+    title: moves ? "Apply this ruling and move the money?" : "Apply this ruling?",
+    body: moves
+      ? `This applies “${label}” through the rail's own money path. It cannot be undone — if anything is wrong, correct the record and rule the case again instead.`
+      : `This applies “${label}”. No money moves: the confirmation records the finding, and the reversal itself happens in the bank's ledger.`,
+    confirmLabel: "Confirm and apply",
+    danger: moves,
+  });
+  if (!ok) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Applying…";
+  }
+  try {
+    const result = await api("POST", `/arbiter/cases/${caseId}/confirm`, {}, TOKEN());
+    const moved = result.remedy && result.remedy.movesFunds;
+    toast(moved ? "Confirmed — the vault was settled" : "Confirmed — recorded, nothing moved", "ok");
+    state.lastRuling = null;
+    render();
+  } catch (err) {
+    toast(err.message, "err");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Confirm and apply";
+    }
+  }
 }
 
 /** Open (or reuse) the thread with someone, then show it. */

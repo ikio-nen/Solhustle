@@ -418,6 +418,143 @@ CREATE TABLE IF NOT EXISTS user_notifications (
 );
 `);
 
+/**
+ * Nyaya — the case layer behind the evidence-to-ruling engine.
+ *
+ * `cases` is deliberately rail-agnostic. An escrow dispute and a UPI fraud
+ * report differ in who owes what and in which rulebook governs, but they are the
+ * same shape to the engine: evidence in, ruling out. The rail-specific facts
+ * live in `payload_json` rather than in a dozen nullable columns, because the
+ * second rail arrived after the first and a third is expected.
+ *
+ * Notice what is *not* stored here: the deadline. `clock_started_at` records when
+ * the governing clock started — the unauthorised transaction's date on the UPI
+ * rail, the escalation date on an escrow dispute — and the due date is derived
+ * from it on read (see `cases.ts`). Persisting a computed deadline as well would
+ * give the row and the rulebook two independent chances to disagree, and the one
+ * a judge reads would be the stale one.
+ */
+db.exec(`
+CREATE TABLE IF NOT EXISTS cases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rail TEXT NOT NULL CHECK (rail IN ('escrow','upi')),
+  title TEXT NOT NULL,
+  -- Who the case is against/for: a user id, a wallet, or a UPI handle.
+  party_ref TEXT NOT NULL DEFAULT '',
+  amount REAL,
+  currency TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','ruled','confirmed','closed')),
+  -- When the governing clock started, in UTC. NULL means "no clock I can compute
+  -- from", which the deadline layer treats as "no countdown" rather than
+  -- guessing a start date.
+  clock_started_at TEXT,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- One row per piece of evidence. body is the text we reason over; ref points
+-- at the artefact it came from (an /uploads path, a transaction signature, a
+-- message id), so a ruling can always be traced back to what it read.
+CREATE TABLE IF NOT EXISTS case_evidence (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  case_id INTEGER NOT NULL REFERENCES cases(id),
+  source TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'text' CHECK (kind IN ('text','upload','message','chain','document')),
+  body TEXT NOT NULL DEFAULT '',
+  ref TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A ruling is a precedent the moment it is written: the next case on the same
+-- rail cites it. The cached column records whether the model's answer came from a live
+-- call or from the offline cache, so a ruling can never quietly claim to be
+-- fresher than it is.
+CREATE TABLE IF NOT EXISTS rulings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  case_id INTEGER NOT NULL REFERENCES cases(id),
+  rulebook TEXT NOT NULL,
+  decision TEXT NOT NULL,
+  confidence REAL,
+  reasoning TEXT NOT NULL DEFAULT '',
+  deadline_at TEXT,
+  liability_band TEXT,
+  model TEXT,
+  cached INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ruling_citations (
+  ruling_id INTEGER NOT NULL REFERENCES rulings(id),
+  cited_ruling_id INTEGER NOT NULL REFERENCES rulings(id),
+  weight REAL NOT NULL DEFAULT 1,
+  PRIMARY KEY (ruling_id, cited_ruling_id)
+);
+
+-- Responses from a real provider call, keyed by a hash of the exact input.
+--
+-- TTL-less on purpose, unlike price_cache: a price is only true for a moment,
+-- but a model's answer to *identical* input does not expire. That makes this
+-- table the offline backstop for the demo — running a case that was already run
+-- answers from cache with no network at all, and it replays the response the
+-- model actually produced rather than a scripted stand-in.
+CREATE TABLE IF NOT EXISTS llm_cache (
+  prompt_hash TEXT PRIMARY KEY,
+  model TEXT NOT NULL,
+  response_json TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_cases_rail ON cases(rail, status);
+CREATE INDEX IF NOT EXISTS idx_case_evidence_case ON case_evidence(case_id);
+CREATE INDEX IF NOT EXISTS idx_rulings_case ON rulings(case_id);
+CREATE INDEX IF NOT EXISTS idx_rulings_rulebook ON rulings(rulebook);
+
+-- Retrieval index for preceding rulings.
+--
+-- Only the body column is indexed; every other column is UNINDEXED on purpose.
+-- FTS5 will happily match a query token against any indexed column, so leaving
+-- the decision indexed would mean a case whose evidence merely contains the word
+-- "freelancer" scores a hit against every ruling that released one. The columns
+-- are kept for filtering and display, and the content comes back from the
+-- rulings table itself — the index is a pointer, never the record.
+CREATE VIRTUAL TABLE IF NOT EXISTS ruling_fts USING fts5(
+  ruling_id UNINDEXED,
+  case_id UNINDEXED,
+  rulebook UNINDEXED,
+  decision UNINDEXED,
+  liability_band UNINDEXED,
+  body
+);
+
+-- Evidence that tried to instruct the arbiter.
+--
+-- The row it came from is never modified: an operator reviewing the case must
+-- see exactly what the party wrote. This table is the record of what was
+-- withheld from the model and why, alongside the snippet that triggered it.
+CREATE TABLE IF NOT EXISTS evidence_quarantine (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  case_id INTEGER NOT NULL REFERENCES cases(id),
+  ruling_id INTEGER REFERENCES rulings(id),
+  evidence_ref TEXT NOT NULL DEFAULT '',
+  rule_id TEXT NOT NULL,
+  snippet TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_quarantine_case ON evidence_quarantine(case_id);
+`);
+
+// A case whose evidence contained instruction-shaped text is flagged rather than
+// refused: the report still deserves a decision, and the operator needs to know
+// that something in it tried to steer the arbiter.
+const caseCols = new Set(
+  (db.prepare("PRAGMA table_info(cases)").all() as { name: string }[]).map((c) => c.name),
+);
+if (!caseCols.has("suspicious")) {
+  db.exec("ALTER TABLE cases ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0");
+}
+
 export function seedDefaultCredentials(): void {
   const accounts = [
     { username: "buyer", password: "buyer123", role: "client" },

@@ -74,6 +74,31 @@ const fmtDate = (v) => {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
+/**
+ * A date and a time, in the reader's own zone.
+ *
+ * `fmtDate` throws the time away, which is right for a “created on” label and
+ * wrong for “the transaction happened at” — a report is read against the clock,
+ * so the clock has to be on screen. DB timestamps are bare UTC and say so here.
+ */
+const stamp = (v) => {
+  if (!v) return "";
+  const s = String(v);
+  const d = new Date(s.includes("T") ? s : `${s.replace(" ", "T")}Z`);
+  if (Number.isNaN(d.getTime())) return s;
+  const day = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return `${day} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+};
+
+/**
+ * The UTC calendar day of an instant.
+ *
+ * The RBI windows are defined in UTC by this build, so a boundary is shown as the
+ * day it falls on rather than a local wall-clock time that would land on a
+ * different date for anyone east of Greenwich.
+ */
+const utcDay = (v) => (v ? String(v).slice(0, 10) : "");
+
 const explorerCluster = "devnet";
 const txLink = (sig) =>
   `<a href="https://solscan.io/tx/${esc(sig)}?cluster=${explorerCluster}" target="_blank" rel="noopener" class="link">` +
@@ -291,6 +316,9 @@ const APP_NAV_LINKS = {
     ["/app#/messages", "Messages"],
     ["/app#/jobs", "Jobs"],
     ["/app#/browse", "Freelancers"],
+    // Cases first: it is the queue staff actually work, and the operator console
+    // is the diagnostics page behind it.
+    ["/app#/cases", "Cases"],
     ["/app#/operator", "Operator"],
   ],
   support: [
@@ -298,6 +326,7 @@ const APP_NAV_LINKS = {
     ["/app#/messages", "Messages"],
     ["/app#/jobs", "Jobs"],
     ["/app#/browse", "Freelancers"],
+    ["/app#/cases", "Cases"],
     ["/app#/operator", "Operator"],
   ],
 };

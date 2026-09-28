@@ -877,6 +877,8 @@ button.avatar-btn:hover { border-color: var(--acc); box-shadow: var(--shadow-lif
   white-space: nowrap;
 }
 .chip.ok { color: var(--ok); border-color: var(--ok-line); background: var(--ok-soft); }
+.chip.warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
+.chip.err { color: var(--err); border-color: var(--err-line); background: var(--err-soft); }
 .chip.dim { opacity: .7; }
 button.chip.toggle { cursor: pointer; font: inherit; font-size: 11px; }
 button.chip.toggle:hover { border-color: var(--acc); color: var(--txt); }
@@ -1656,6 +1658,20 @@ button.chip.toggle.on { background: var(--acc); color: #fff; border-color: var(-
 .crew-foot { margin-top: 28px; text-align: center; }
 .crew-cta { justify-content: center; margin: 14px 0 4px; }
 .crew-note { color: var(--dim); margin: 8px 0 0; }
+
+/* --- case review -----------------------------------------------------------------
+   Evidence bodies are prose a party wrote, so they keep their own line breaks and
+   are never allowed to stretch the layout. */
+.evidence-body {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+/* A sub-heading inside a card needs air above it; `.h-sub` only sets a bottom one. */
+h4.h-sub { margin: 18px 0 8px; }
+
 @media (prefers-reduced-motion: reduce) {
   .crew-card { transition: none; }
   .crew-card:hover { transform: none; }

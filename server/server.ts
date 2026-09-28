@@ -93,6 +93,20 @@ import {
   respondNotificationRoute,
 } from "./profiles.ts";
 import { listDisputes, getDispute, ruleDispute, disputeEvidence } from "./disputes.ts";
+import {
+  listCasesRoute,
+  createCaseRoute,
+  getCaseRoute,
+  updateCaseRoute,
+  deleteCaseRoute,
+} from "./cases.ts";
+import {
+  ruleCaseRoute,
+  confirmCaseRoute,
+  getRulingRoute,
+  listRulingsRoute,
+  listRulebooksRoute,
+} from "./arbiter.ts";
 import { createTicket, listTickets, getTicket, replyTicket, resolveTicket } from "./tickets.ts";
 import { leaderboardRoute, recomputeLeaderboard } from "./leaderboard.ts";
 import { healthRoute, reconciliationRoute, auditRoute, listUsers, setUserStatus, userDetail } from "./admin.ts";
@@ -263,6 +277,30 @@ app.post("/escrow/:id/fund/confirm", requireAuth, h_wrap(escrowConfirmFundRoute)
 app.get("/disputes", requireAuth, requireRole("support", "dev"), h_wrap(listDisputes));
 app.get("/disputes/:id", requireAuth, requireRole("support", "dev"), h_wrap(getDispute));
 app.post("/disputes/:id/rule", requireAuth, requireRole("support", "dev"), h_wrap(ruleDispute));
+
+// --- nyaya: the case layer behind the evidence-to-ruling engine --------------------
+//
+// Staff-only, exactly like the dispute queue it generalises. A case carries
+// counterparty evidence and, once the arbiter lands, its confirmation moves
+// money — so it gets the same gate as ruling a dispute, not a broader one.
+app.get("/arbiter/cases", requireAuth, requireRole("support", "dev"), h_wrap(listCasesRoute));
+// The rails and their remedies, so the console labels a decision with the words
+// the rulebook defines instead of a second, drifting copy of the ids.
+app.get("/arbiter/rulebooks", requireAuth, requireRole("support", "dev"), h_wrap(listRulebooksRoute));
+app.post("/arbiter/cases", requireAuth, requireRole("support", "dev"), h_wrap(createCaseRoute));
+app.get("/arbiter/cases/:id", requireAuth, requireRole("support", "dev"), h_wrap(getCaseRoute));
+// Every ruling the case has produced, with its citations resolved and its
+// quarantine record — the console renders one case from this single call.
+app.get("/arbiter/cases/:id/rulings", requireAuth, requireRole("support", "dev"), h_wrap(listRulingsRoute));
+app.patch("/arbiter/cases/:id", requireAuth, requireRole("support", "dev"), h_wrap(updateCaseRoute));
+// Deleting is destructive and retires a case for good, so it is dev-only.
+app.delete("/arbiter/cases/:id", requireAuth, requireRole("dev"), h_wrap(deleteCaseRoute));
+// Ruling only ever recommends. Confirming is the separate, deliberate step that
+// applies the remedy through the rail's own money path — the same gate as ruling
+// a dispute by hand, because it is the same decision.
+app.post("/arbiter/cases/:id/rule", requireAuth, requireRole("support", "dev"), h_wrap(ruleCaseRoute));
+app.post("/arbiter/cases/:id/confirm", requireAuth, requireRole("support", "dev"), h_wrap(confirmCaseRoute));
+app.get("/arbiter/rulings/:id", requireAuth, requireRole("support", "dev"), h_wrap(getRulingRoute));
 
 // --- help desk tickets -------------------------------------------------------------
 app.post("/tickets", requireAuth, h_wrap(createTicket));

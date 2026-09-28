@@ -139,6 +139,27 @@ export const config = {
   arbiterKeyB58: env.ARBITER_KEY_B58 || undefined,
   geminiApiKey: env.GEMINI_SOL_PRICE_API_KEY || env.GEMINI_API_KEY || undefined,
   geminiApiSecret: env.GEMINI_API_SECRET || undefined,
+  /**
+   * The model behind the case engine. Any OpenAI-compatible
+   * `/chat/completions` endpoint works, and the base URL is configuration so a
+   * locally hosted model can be swapped in — which matters at an offline venue
+   * where the public internet is not something to bet a demo on.
+   *
+   * With no key set, `llm.ts` reports itself unavailable instead of failing
+   * late: callers fall back to a previously cached response, and if there is
+   * none they surface an error. It never invents one.
+   */
+  llm: (() => {
+    const apiKey = (env.LLM_API_KEY || "").trim();
+    return {
+      apiKey: apiKey || undefined,
+      baseUrl: (env.LLM_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, ""),
+      model: env.LLM_MODEL || "gpt-4o-mini",
+      /** Hard ceiling on one call; a hung provider must not hold the demo. */
+      timeoutMs: Number(env.LLM_TIMEOUT_MS || 20_000),
+      configured: Boolean(apiKey),
+    };
+  })(),
   airdropUrl: env.AIRDROP_URL || undefined,
   dataDir: env.DATA_DIR || "data",
   keysDir: env.KEYS_DIR || "keys",
