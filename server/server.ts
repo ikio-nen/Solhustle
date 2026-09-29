@@ -325,20 +325,56 @@ app.get("/admin/jobs", requireAuth, requireRole("support", "dev"), h_wrap(async 
   res.json({ jobs });
 }));
 
-app.get("/neon/status", h_wrap(async (_req, res) => {
-  const { getUsersFromNeon, getJobsFromNeon, getTransactionsFromNeon } = await import("./neon.ts");
-  const users = await getUsersFromNeon();
-  const jobs = await getJobsFromNeon();
-  const txs = await getTransactionsFromNeon();
+// The Postgres mirror's contents. Staff-only: it is a full dump of every wallet
+// address, contract and settled transaction, which is the same material
+// /admin/users and /admin/jobs already gate — an unauthenticated route returning
+// it was simply a way around those gates. The provider label now comes from
+// configuration too, rather than naming a host in the source.
+app.get("/neon/status", requireAuth, requireRole("support", "dev"), h_wrap(async (_req, res) => {
+  const { getUsersFromNeon, getJobsFromNeon, getTransactionsFromNeon, getCaseLawFromNeon, neonConfigured } =
+    await import("./neon.ts");
+  // A mirror that is down is the single most useful thing this page can report, so a
+  // failed read degrades to an empty list plus an error field instead of a 500 that
+  // says nothing about why. Every count below is derived from these lists, so they
+  // follow the degradation rather than claiming rows that were never read.
+  let readError = "";
+  const read = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await fn();
+    } catch (err) {
+      readError ||= err instanceof Error ? err.message : String(err);
+      return fallback;
+    }
+  };
+  const users = await read<any[]>(getUsersFromNeon, []);
+  const jobs = await read<any[]>(getJobsFromNeon, []);
+  const txs = await read<any[]>(getTransactionsFromNeon, []);
+  // Nyaya's own record, mirrored. Without this the status view was a mirror of the
+  // marketplace that said nothing about the case law the marketplace now produces.
+  const cases = await read<any[]>(getCaseLawFromNeon, []);
   res.json({
-    connected: true,
-    provider: "Neon PostgreSQL (AWS us-east-2)",
-    host: "ep-mute-bonus-b5bocw4s-pooler.c-7.us-east-2.aws.neon.tech",
+    connected: neonConfigured,
+    provider: neonConfigured ? "PostgreSQL (mirror)" : "not configured",
+    host: config.databaseHost,
+    // Only present when a read failed, so a healthy mirror carries no null field.
+    ...(readError ? { error: readError } : {}),
     counts: {
       users: users.length,
       jobs: jobs.length,
-      settled_transactions: txs.length
+      settled_transactions: txs.length,
+      cases: cases.length,
+      rulings: cases.reduce((sum, c) => sum + Number(c.rulings || 0), 0),
+      citations: cases.reduce((sum, c) => sum + Number(c.citations || 0), 0)
     },
+    case_law: cases.map(c => ({
+      id: c.id,
+      rail: c.rail,
+      status: c.status,
+      title: c.title,
+      rulings: Number(c.rulings || 0),
+      citations: Number(c.citations || 0),
+      suspicious: Number(c.suspicious || 0) === 1
+    })),
     users: users.map(u => ({ id: u.id, wallet_address: u.wallet_address, role: u.role, status: u.status })),
     jobs: jobs.map(j => ({ id: j.id, title: j.title, status: j.status, usd_budget: j.usd_budget, sol_amount: j.sol_amount, escrow_address: j.escrow_address })),
     transactions: txs.map(t => ({ id: t.id, job_id: t.job_id, tx_signature: t.tx_signature, instruction_type: t.instruction_type, amount_lamports: t.amount_lamports, confirmed_at: t.confirmed_at })),
@@ -533,6 +569,19 @@ const server = app.listen(config.port, () => {
   console.log(
     `Solana escrow marketplace backend on ${config.appOrigin} (${config.chain}, ${config.nodeEnv})`,
   );
+  // Auth0 sends the browser back to the whitelisted callback URL, not to whatever
+  // origin this process happens to serve. When those disagree — a preview on another
+  // port, a proxy in front — the sign-in completes at Auth0 and then dies on a server
+  // that is not this one, with no error anywhere. Say it at boot; the login page says
+  // it too.
+  const mismatch = config.auth0.originMismatch;
+  if (config.auth0.configured && mismatch) {
+    console.warn(
+      `Auth0 callback origin mismatch: this server serves ${mismatch.servingOrigin} but ` +
+        `AUTH0_CALLBACK_URL points at ${mismatch.callbackOrigin} — hosted sign-in will ` +
+        `return to ${mismatch.callbackOrigin} and no session will be issued here.`,
+    );
+  }
 });
 
 // --- graceful shutdown --------------------------------------------------------

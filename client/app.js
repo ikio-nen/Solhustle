@@ -62,6 +62,12 @@ const can = (role) => ent().includes(role);
 const uid = () => (state.me && state.me.user ? state.me.user.id : null);
 const TOKEN = () => state.session && state.session.token;
 
+// Polling handle for the open chat thread. Declared up here rather than beside the
+// chat code below, because `render()` clears it synchronously on every navigation —
+// a `let` further down the file would still be in its temporal dead zone on the
+// first render and throw, stranding the app on the "Loading…" placeholder.
+let chatTimer = null;
+
 // ---------------------------------------------------------------------------
 // Routing
 // ---------------------------------------------------------------------------
@@ -1616,8 +1622,6 @@ async function viewCase() {
 // thread lives in the URL (#/messages/12), so a conversation is linkable, and
 // polling is scoped to whichever thread is actually on screen.
 // ---------------------------------------------------------------------------
-let chatTimer = null;
-
 const dateOf = (ts) => String(ts || "").slice(0, 10);
 const clockOf = (ts) => String(ts || "").slice(11, 16);
 const isoDay = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;

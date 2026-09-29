@@ -1,6 +1,7 @@
 import { db } from "./db.ts";
 import { config } from "./config.ts";
 import { callModel, type JsonSchema } from "./llm.ts";
+import { syncCaseGraphToNeon } from "./neon.ts";
 import { bad, conflict, h, notFound, parseIntOr, optionalString, requireString } from "./util.ts";
 
 /**
@@ -227,6 +228,23 @@ export type CreateCaseInput = {
   evidence?: { source?: string; kind?: CaseKind; body: string; ref?: string | null }[];
 };
 
+/**
+ * Keep the Postgres copy of this case in step with SQLite.
+ *
+ * Fire-and-forget, like every other mirror write in the app: nothing on the
+ * request path waits on Postgres, and a mirror that is unreachable must not turn a
+ * ruling into a 500. The ten-minute boot sync is the backstop for whatever this
+ * misses.
+ *
+ * Passing the id rather than the changed rows is deliberate — a ruling is
+ * persisted in several steps (the decision, then its citations, then the
+ * quarantine rows that get their `ruling_id` attached), and only the finished
+ * article is worth copying.
+ */
+function mirrorCase(caseId: number): void {
+  syncCaseGraphToNeon(caseId).catch(() => {});
+}
+
 export function createCase(input: CreateCaseInput): CaseRow {
   db.prepare(
     `INSERT INTO cases (rail, title, party_ref, amount, currency, clock_started_at, payload_json)
@@ -255,6 +273,9 @@ export function createCase(input: CreateCaseInput): CaseRow {
       ref: item.ref ?? null,
     });
   }
+  // Once, after the intake evidence, rather than once per `addEvidence` call: the
+  // sync reads the whole graph, so N calls would be N copies of the same rows.
+  mirrorCase(id);
   return row;
 }
 
@@ -321,6 +342,10 @@ export function updateCase(id: number, patch: UpdateCasePatch): CaseRow | undefi
   sets.push("updated_at = datetime('now')");
   params.push(id);
   db.prepare(`UPDATE cases SET ${sets.join(", ")} WHERE id = ?`).run(...params);
+  // After the write, so the copy carries whatever this update changed — and, on
+  // the ruling path, the ruling and its citations that were inserted just before
+  // it. That ordering is what makes this hook enough on its own for a ruling.
+  mirrorCase(id);
   return getCase(id);
 }
 

@@ -88,6 +88,8 @@ export const config = {
     redirectUri: string;
     callbackPath: string;
     configured: boolean;
+    /** Set when this process serves an origin other than the one Auth0 returns to. */
+    originMismatch: { servingOrigin: string; callbackOrigin: string } | null;
   } => {
     const raw = (env.AUTH0_ISSUER_BASE_URL || env.AUTH0_DOMAIN || "").trim().replace(/\/+$/, "");
     const issuerBaseUrl = raw ? (/^https?:\/\//.test(raw) ? raw : `https://${raw}`) : undefined;
@@ -109,6 +111,19 @@ export const config = {
     } catch {
       /* the guard above means this cannot happen; keep the canonical path */
     }
+    // The callback URL is absolute on purpose — Auth0 only answers a URL the tenant
+    // has whitelisted — which means a process serving a different origin advertises a
+    // callback it does not serve: Auth0 finishes the sign-in and hands the browser to
+    // the other port, where no session can be issued, and nothing says why. Recorded
+    // rather than rewritten: a URL Auth0 has not been told about is refused outright.
+    let originMismatch: { servingOrigin: string; callbackOrigin: string } | null = null;
+    try {
+      const servingOrigin = new URL(appOrigin).origin;
+      const callbackOrigin = new URL(redirectUri).origin;
+      if (servingOrigin !== callbackOrigin) originMismatch = { servingOrigin, callbackOrigin };
+    } catch {
+      /* an origin this app cannot parse is not something to warn about from here */
+    }
     return {
       issuerBaseUrl,
       clientId,
@@ -116,6 +131,7 @@ export const config = {
       redirectUri,
       callbackPath,
       configured: Boolean(issuerBaseUrl && clientId && clientSecret),
+      originMismatch,
     };
   })(),
   /**
@@ -161,6 +177,23 @@ export const config = {
     };
   })(),
   airdropUrl: env.AIRDROP_URL || undefined,
+  /**
+   * The host of the Postgres mirror, for the status view, or null when there is
+   * none. Deliberately the host alone: `DATABASE_URL` carries a password, and a
+   * status page is the last place that should ever appear — which is exactly why
+   * this is derived here instead of the full string being echoed back.
+   */
+  databaseHost: (() => {
+    const url = (env.DATABASE_URL || "").trim();
+    if (!url) return null;
+    try {
+      return new URL(url).host || null;
+    } catch {
+      // A connection string this app cannot parse is still one pg may accept, so
+      // this reports "unknown" rather than the value it failed to read.
+      return null;
+    }
+  })(),
   dataDir: env.DATA_DIR || "data",
   keysDir: env.KEYS_DIR || "keys",
   debugLogs: bool(env.DEBUG_LOGS),

@@ -55,6 +55,8 @@ export function auth0Meta(): {
   redirectUri: string;
   logoutReturnTo: string;
   callbackPath: string;
+  /** Both origins, when they disagree — the login page reports the round trip as broken. */
+  originMismatch: { servingOrigin: string; callbackOrigin: string } | null;
 } {
   const { issuerBaseUrl, redirectUri, callbackPath } = config.auth0;
   return {
@@ -63,6 +65,7 @@ export function auth0Meta(): {
     redirectUri,
     logoutReturnTo: config.auth0LogoutReturnTo,
     callbackPath,
+    originMismatch: config.auth0.originMismatch,
   };
 }
 

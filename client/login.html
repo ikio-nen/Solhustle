@@ -195,6 +195,20 @@
       <p class="helper">Takes you to <code id="auth0-domain">Auth0</code>, the hosted login page, to enter your credentials — your password never touches this app.</p>
     </div>
 
+    <!-- Auth0 returns the browser to the URL the tenant whitelisted, which is not
+         necessarily the origin serving this page. When the two disagree, the sign-in
+         succeeds at Auth0 and then lands on the other origin, where no session can be
+         issued — the button looks broken and nothing says why. Name both origins and
+         the URL to whitelist. -->
+    <div id="auth0-mismatch" class="notice hidden" style="margin-top: 14px">
+      <strong>Auth0 will return to a different origin than this page.</strong>
+      This server serves <code id="auth0-serving-origin">this origin</code>, but
+      <code>AUTH0_CALLBACK_URL</code> points at <code id="auth0-callback-origin">the configured origin</code>,
+      so a finished sign-in lands there and no session is issued here. Either serve the app on the
+      callback's origin, or add <code id="auth0-this-callback">this origin</code> to the Auth0
+      application's Allowed Callback URLs and point <code>AUTH0_CALLBACK_URL</code> at it.
+    </div>
+
     <!-- No client credentials on this server: say what has to be set instead of
          rendering a button that would fail on redirect. -->
     <div id="auth0-missing" class="notice hidden">
@@ -606,6 +620,16 @@ renderNavbar("login");
       const next = params.get("next");
       $id("auth0-btn").href =
         "/auth/auth0/login" + (next && /^\/(?!\/)/.test(next) ? "?next=" + encodeURIComponent(next) : "");
+      // The button is real either way, so this is the only place that can explain a
+      // sign-in that finishes at Auth0 and comes back to a port this server is not on.
+      const mismatch = meta.auth0.originMismatch;
+      if (mismatch) {
+        $id("auth0-serving-origin").textContent = mismatch.servingOrigin;
+        $id("auth0-callback-origin").textContent = mismatch.callbackOrigin;
+        $id("auth0-this-callback").textContent =
+          window.location.origin + (meta.auth0.callbackPath || "/auth/auth0/callback");
+        $id("auth0-mismatch").classList.remove("hidden");
+      }
     } else {
       auth0Missing.classList.remove("hidden");
       // Name the URLs this deployment actually uses: AUTH0_CALLBACK_URL can point
