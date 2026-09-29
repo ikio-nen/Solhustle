@@ -1,3 +1,5 @@
+import path from "node:path";
+
 const bool = (v: string | undefined) => v === "1" || v === "true" || v === "yes";
 const env = process.env;
 
@@ -11,8 +13,11 @@ function resolveJwtSecret(): string {
   const secret = env.JWT_SECRET?.trim();
   if (isProduction) {
     if (!secret || secret === INSECURE_JWT_SECRET || secret.length < 32) {
+      // Say how to make one: this is the error a first deploy hits, and the
+      // host's variable page is where the answer has to be usable.
       throw new Error(
-        "JWT_SECRET must be set to a random value of at least 32 characters in production",
+        "JWT_SECRET must be set to a random value of at least 32 characters in production. " +
+          "Generate one with: node -e \"console.log(require('crypto').randomBytes(48).toString('base64url'))\"",
       );
     }
     return secret;
@@ -196,6 +201,23 @@ export const config = {
   })(),
   dataDir: env.DATA_DIR || "data",
   keysDir: env.KEYS_DIR || "keys",
+  /**
+   * Whether the ledger and the wallet key material sit on a path the host is
+   * free to recreate. Relative defaults are right on a laptop; on a container
+   * host they resolve inside the deploy directory, which is replaced on every
+   * redeploy — taking every case, ruling and the platform wallet with it.
+   */
+  storageIsEphemeral: (() => {
+    const dataDir = env.DATA_DIR || "data";
+    const keysDir = env.KEYS_DIR || "keys";
+    return !path.isAbsolute(dataDir) || !path.isAbsolute(keysDir);
+  })(),
+  /**
+   * The code that authorises creating a `support` or `dev` account. Roles
+   * outside `SELF_SERVICE_ROLES` open the operator console and the case docket,
+   * so they are configuration rather than something a caller can ask for.
+   */
+  staffInviteCode: (env.STAFF_INVITE_CODE || "").trim() || undefined,
   debugLogs: bool(env.DEBUG_LOGS),
 };
 

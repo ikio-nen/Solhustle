@@ -565,6 +565,57 @@ app.use((err: Err, _req: express.Request, res: express.Response, _next: express.
 // --- hourly leaderboard recompute ----------------------------------------------------------
 setInterval(recomputeLeaderboard, 60 * 60 * 1000);
 
+/**
+ * A hosted deployment fails in ways a laptop never does: the filesystem is
+ * replaced on every redeploy, the origin is not localhost, and there may be no
+ * way to create a staff account at all. Every one of these is legal
+ * configuration — the app runs — so none can be an error, and each is worth
+ * saying at boot instead of discovering it after a demo.
+ */
+function warnAboutDeployment(): void {
+  if (!config.isProduction) return;
+  const notes: string[] = [];
+
+  if (config.storageIsEphemeral) {
+    notes.push(
+      `DATA_DIR/KEYS_DIR are relative (${config.dataDir}, ${config.keysDir}), so the ledger ` +
+        `and the platform wallet live inside the deploy directory. Hosts commonly replace ` +
+        `that on redeploy — mount a volume and point both at it, or the next deploy drops ` +
+        `every case and issues a new platform wallet.`,
+    );
+  }
+  if (/localhost|127\.0\.0\.1|0\.0\.0\.0/.test(config.appOrigin)) {
+    notes.push(
+      `APP_ORIGIN is ${config.appOrigin}: SIWS messages, links and the Auth0 callback will ` +
+        `name a host visitors cannot reach. Set it to the public URL.`,
+    );
+  }
+  if (!config.staffInviteCode) {
+    notes.push(
+      "STAFF_INVITE_CODE is unset, so no support or dev account can be created and the " +
+        "operator console and case docket are unreachable. Set a random code and send it as " +
+        "the x-staff-invite header when signing in as staff.",
+    );
+  }
+  if (config.seedDemoAccounts) {
+    notes.push(
+      "SEED_DEMO_ACCOUNTS is on in production: the seeded accounts use passwords published " +
+        "in this repository, so anyone who has read it can sign in as staff.",
+    );
+  }
+  if (!config.llm.configured) {
+    notes.push(
+      "LLM_API_KEY is unset, so Nyaya cannot reach a model: it will replay a cached ruling " +
+        "for an input it has already seen and report itself unavailable for anything else.",
+    );
+  }
+
+  if (!notes.length) return;
+  console.warn("\nDeployment notes:");
+  for (const note of notes) console.warn(`  - ${note}`);
+  console.warn("");
+}
+
 const server = app.listen(config.port, () => {
   console.log(
     `Solana escrow marketplace backend on ${config.appOrigin} (${config.chain}, ${config.nodeEnv})`,
@@ -582,6 +633,7 @@ const server = app.listen(config.port, () => {
         `return to ${mismatch.callbackOrigin} and no session will be issued here.`,
     );
   }
+  warnAboutDeployment();
 });
 
 // --- graceful shutdown --------------------------------------------------------

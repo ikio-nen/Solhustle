@@ -770,6 +770,39 @@ export function challengeRoute(req: Request, res: Response): void {
   res.json({ nonce, message });
 }
 
+/**
+ * A `client` or `freelancer` account is anyone's to create. `support` and `dev`
+ * open the operator console and the case docket, so they are the roles that must
+ * not be self-service.
+ *
+ * The authorisation is a configured code rather than a fixed header name. The
+ * previous gate required an `x-staff-invite` header that nothing in this repo —
+ * not the client, not any env var, not the tests — could ever send, and it only
+ * applied once the users table had a row in it. Between the two, the console was
+ * reachable exactly once, by whoever signed up first, and unreachable in any
+ * deployment that seeded no staff. A gate nobody can satisfy is not a gate; it
+ * is a 403 for the one person who needs the console.
+ *
+ * So: with STAFF_INVITE_CODE set, a caller must present that code; with it
+ * unset, production refuses staff signup outright and development permits it,
+ * because the demo personas and the seed already create staff there.
+ */
+function assertStaffSignupAllowed(req: Request, role: UserRole): void {
+  if (SELF_SERVICE_ROLES.includes(role)) return;
+  const code = config.staffInviteCode;
+  if (!code) {
+    if (config.isProduction) {
+      throw forbidden("staff signup is disabled; set STAFF_INVITE_CODE to enable it");
+    }
+    return;
+  }
+  const header = req.headers["x-staff-invite"];
+  const presented = typeof header === "string" ? header.trim() : "";
+  if (!presented || !safeEqual(presented, code)) {
+    throw forbidden("staff signup requires the invite code in x-staff-invite");
+  }
+}
+
 export function verifyRoute(req: Request, res: Response): void {
   const { wallet, signature, nonce, role } = (req.body ?? {}) as Record<string, unknown>;
   if (typeof wallet !== "string" || typeof signature !== "string" || typeof nonce !== "string") {
@@ -817,13 +850,7 @@ export function verifyRoute(req: Request, res: Response): void {
   }
   const userRole: User["role"] =
     typeof role === "string" && USER_ROLES.includes(role as UserRole) ? (role as UserRole) : "client";
-  const anyoneElse = db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number };
-  if (
-    (userRole === "support" || userRole === "dev") &&
-    anyoneElse.n > 0 &&
-    !req.headers["x-staff-invite"]
-  )
-    throw forbidden("support/dev self-signup requires x-staff-invite header (demo gate)");
+  assertStaffSignupAllowed(req, userRole);
   const user = createUser(wallet, userRole) as UserRow;
   recordAuthEvent(user.id, "signup", req, `wallet-sign role=${user.role}`);
   res.json({ token: issueToken(user), user: publicUser(user), isNew: true });
