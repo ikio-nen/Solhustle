@@ -1578,9 +1578,9 @@ button.chip.toggle.on { background: var(--acc); color: #fff; border-color: var(-
 /* ===========================================================================
    Creators page
 
-   Portraits are generated, not photographed: a gradient tile with the person's
-   initials, the same convention the app uses for avatars everywhere else. Drop a
-   real photo into .crew-art and it still works.
+   Every portrait is a real photograph, cropped and graded offline so the six
+   frames line up (see .freebuff/enhance-portraits.ps1). A member with no photo
+   falls back to a gradient tile carrying their initials.
    =========================================================================== */
 /* The team block closes the landing page, so it leans on `.section-title` and
    only needs a slightly tighter lede above the grid. */
@@ -1605,7 +1605,7 @@ button.chip.toggle.on { background: var(--acc); color: #fff; border-color: var(-
 }
 .crew-art {
   position: relative;
-  aspect-ratio: 5 / 4;
+  aspect-ratio: 4 / 5;
   border-radius: var(--r-md);
   display: grid;
   place-items: center;
@@ -1627,15 +1627,16 @@ button.chip.toggle.on { background: var(--acc); color: #fff; border-color: var(-
   inset: 0;
   background: radial-gradient(140px 120px at 72% 18%, rgba(255, 255, 255, .3), transparent 70%);
 }
-/* A real photograph instead of the initials plate. Keep the same 5:4 frame so the
-   grid stays even, and anchor to the upper part: these are portrait shots, and a
-   centred crop of a face lands on the chin. */
+/* A real photograph instead of the initials plate. The frame is portrait because
+   the sources are: a face cropped into a landscape tile loses its headroom and,
+   when the source is barely wider than the tile, leaves no room to centre it.
+   The crop is baked into the asset, so the image needs no offset of its own. */
 .crew-art--photo::after { display: none; }
 .crew-art--photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 22%;
+  object-position: 50% 50%;
   display: block;
 }
 .crew-art--1 { background: linear-gradient(140deg, #23252c, #55663f); }
